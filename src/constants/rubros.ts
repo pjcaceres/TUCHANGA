@@ -11,3 +11,7 @@ export const RUBROS = [
 ] as const;
 
 export type RubroId = (typeof RUBROS)[number]['id'];
+
+export function rubroLabel(id: RubroId | null): string {
+  return RUBROS.find((r) => r.id === id)?.label ?? 'Oficio no especificado';
+}

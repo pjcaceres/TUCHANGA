@@ -1,0 +1,265 @@
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import StarRating from '../components/StarRating';
+import { rubroLabel } from '../constants/rubros';
+import { colors } from '../constants/theme';
+import { supabase } from '../lib/supabase';
+import type { AppStackParamList } from '../navigation/types';
+import type { Profile, Resena } from '../types/database';
+
+type Props = NativeStackScreenProps<AppStackParamList, 'WorkerProfile'>;
+
+export default function WorkerProfileScreen({ route }: Props) {
+  const { workerId } = route.params;
+
+  const [trabajador, setTrabajador] = useState<Profile | null>(null);
+  const [resenas, setResenas] = useState<Resena[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelado = false;
+
+    async function cargar() {
+      setLoading(true);
+      setError(null);
+
+      const [perfilResult, resenasResult] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', workerId).single(),
+        supabase
+          .from('resenas')
+          .select('*')
+          .eq('trabajador_id', workerId)
+          .order('created_at', { ascending: false }),
+      ]);
+
+      if (cancelado) return;
+
+      if (perfilResult.error) {
+        setError(perfilResult.error.message);
+      } else {
+        setTrabajador(perfilResult.data);
+      }
+
+      if (!resenasResult.error) {
+        setResenas(resenasResult.data ?? []);
+      }
+
+      setLoading(false);
+    }
+
+    cargar();
+
+    return () => {
+      cancelado = true;
+    };
+  }, [workerId]);
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator color={colors.primary} size="large" />
+      </View>
+    );
+  }
+
+  if (error || !trabajador) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>{error ?? 'No encontramos este perfil.'}</Text>
+      </View>
+    );
+  }
+
+  const inicial = trabajador.nombre.trim().charAt(0).toUpperCase() || '?';
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.headerCard}>
+        {trabajador.foto_url ? (
+          <Image source={{ uri: trabajador.foto_url }} style={styles.photo} />
+        ) : (
+          <View style={[styles.photo, styles.photoPlaceholder]}>
+            <Text style={styles.photoInitial}>{inicial}</Text>
+          </View>
+        )}
+        <Text style={styles.nombre}>{trabajador.nombre}</Text>
+        <Text style={styles.rubro}>{rubroLabel(trabajador.rubro)}</Text>
+        <StarRating
+          calificacion={trabajador.calificacion_promedio}
+          cantidad={trabajador.cantidad_resenas}
+          size={16}
+        />
+        {(trabajador.barrio || trabajador.departamento) && (
+          <Text style={styles.ubicacion}>
+            {[trabajador.barrio, trabajador.departamento].filter(Boolean).join(', ')}
+          </Text>
+        )}
+        {trabajador.precio_orientativo !== null && (
+          <Text style={styles.precio}>
+            Precio orientativo: ${trabajador.precio_orientativo}
+          </Text>
+        )}
+      </View>
+
+      {trabajador.descripcion && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Sobre mí</Text>
+          <Text style={styles.descripcion}>{trabajador.descripcion}</Text>
+        </View>
+      )}
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>
+          Historial de trabajos {resenas.length > 0 ? `(${resenas.length})` : ''}
+        </Text>
+
+        {resenas.length === 0 ? (
+          <Text style={styles.sinResenas}>Todavía no tiene trabajos ni reseñas cargadas.</Text>
+        ) : (
+          resenas.map((resena) => (
+            <View key={resena.id} style={styles.resenaCard}>
+              <View style={styles.resenaHeader}>
+                <Text style={styles.resenaTrabajo} numberOfLines={2}>
+                  {resena.trabajo_descripcion ?? 'Trabajo realizado'}
+                </Text>
+                <StarRating
+                  calificacion={resena.calificacion}
+                  cantidad={1}
+                  size={12}
+                  mostrarConteo={false}
+                />
+              </View>
+              {resena.comentario && <Text style={styles.resenaComentario}>“{resena.comentario}”</Text>}
+              <Text style={styles.resenaCliente}>
+                — {resena.cliente_nombre}, {formatearFecha(resena.created_at)}
+              </Text>
+            </View>
+          ))
+        )}
+      </View>
+    </ScrollView>
+  );
+}
+
+function formatearFecha(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-UY', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  content: {
+    padding: 20,
+    gap: 16,
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    padding: 24,
+  },
+  errorText: {
+    color: colors.error,
+    textAlign: 'center',
+  },
+  headerCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 20,
+    alignItems: 'center',
+    gap: 6,
+  },
+  photo: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    marginBottom: 8,
+  },
+  photoPlaceholder: {
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoInitial: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: '700',
+  },
+  nombre: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  rubro: {
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+  ubicacion: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginTop: 4,
+  },
+  precio: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: '600',
+    marginTop: 6,
+  },
+  section: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 20,
+    gap: 10,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  descripcion: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  sinResenas: {
+    fontSize: 14,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+  },
+  resenaCard: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 10,
+    gap: 4,
+  },
+  resenaHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  resenaTrabajo: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    flex: 1,
+  },
+  resenaComentario: {
+    fontSize: 13,
+    color: colors.text,
+    fontStyle: 'italic',
+  },
+  resenaCliente: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+});

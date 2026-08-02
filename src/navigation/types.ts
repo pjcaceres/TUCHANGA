@@ -4,5 +4,6 @@ export type AuthStackParamList = {
 };
 
 export type AppStackParamList = {
-  Home: undefined;
+  WorkersList: undefined;
+  WorkerProfile: { workerId: string; nombre: string };
 };

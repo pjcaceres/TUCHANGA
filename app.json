@@ -20,6 +20,14 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "TuChanga usa tu ubicación para mostrarte los trabajadores más cercanos."
+        }
+      ]
+    ]
   }
 }

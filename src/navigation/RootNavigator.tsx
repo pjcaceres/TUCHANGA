@@ -2,9 +2,10 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
-import HomeScreen from '../screens/HomeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import WorkerProfileScreen from '../screens/WorkerProfileScreen';
+import WorkersListScreen from '../screens/WorkersListScreen';
 import { colors } from '../constants/theme';
 import type { AppStackParamList, AuthStackParamList } from './types';
 
@@ -22,8 +23,17 @@ function AuthNavigator() {
 
 function AppNavigator() {
   return (
-    <AppStack.Navigator screenOptions={{ headerShown: false }}>
-      <AppStack.Screen name="Home" component={HomeScreen} />
+    <AppStack.Navigator>
+      <AppStack.Screen
+        name="WorkersList"
+        component={WorkersListScreen}
+        options={{ headerShown: false }}
+      />
+      <AppStack.Screen
+        name="WorkerProfile"
+        component={WorkerProfileScreen}
+        options={({ route }) => ({ title: route.params.nombre })}
+      />
     </AppStack.Navigator>
   );
 }
