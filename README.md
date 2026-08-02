@@ -44,7 +44,6 @@ supabase/
   seed.sql                    Trabajadores ficticios de prueba repartidos en varios departamentos
   functions/
     generar-perfil/           Edge Function: arma rubro/descripción/departamento con Claude (Anthropic)
-    _shared/catalogo.ts        Rubros y departamentos válidos (debe reflejar los de src/constants)
 ```
 
 ## Setup
@@ -73,21 +72,20 @@ un texto libre contando lo que hace, y la Edge Function `generar-perfil` le pide
 que devuelva rubro / descripción / departamento en JSON estructurado. El trabajador siempre revisa
 y puede editar ese resultado antes de confirmar — nunca se guarda directo.
 
-Para habilitarlo:
+Para habilitarlo desde el [Dashboard de Supabase](https://supabase.com/dashboard) (sin CLI):
 
-1. Instalá el [CLI de Supabase](https://supabase.com/docs/guides/cli) si no lo tenés, y logueate
-   (`supabase login`) y vinculá el proyecto (`supabase link --project-ref <tu-project-ref>`).
-2. Configurá el secreto con tu clave de API de Claude (nunca se expone al cliente):
+1. **Configurar el secreto**: en tu proyecto → *Edge Functions* → *Manage secrets* (o *Settings →
+   Edge Functions*) → agregá una variable `ANTHROPIC_API_KEY` con tu clave de API de Claude. Nunca
+   se expone al cliente, solo la lee la función del lado del servidor.
+2. **Crear la función**: en *Edge Functions* → *Deploy a new function* → nombrala exactamente
+   `generar-perfil` (tiene que coincidir con el nombre que usa la app) → pegá el contenido completo
+   de `supabase/functions/generar-perfil/index.ts` en el editor → *Deploy*.
 
-   ```bash
-   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-   ```
+   El archivo es autocontenido (no depende de otros archivos del repo), así que un copy-paste
+   directo alcanza.
 
-3. Desplegá la función:
-
-   ```bash
-   supabase functions deploy generar-perfil
-   ```
+También se puede hacer con el [CLI de Supabase](https://supabase.com/docs/guides/cli):
+`supabase secrets set ANTHROPIC_API_KEY=sk-ant-...` y después `supabase functions deploy generar-perfil`.
 
 La app la invoca vía `supabase.functions.invoke('generar-perfil', { body: { texto } })` usando el
 anon key normal — no hace falta ninguna variable de entorno adicional del lado del cliente.

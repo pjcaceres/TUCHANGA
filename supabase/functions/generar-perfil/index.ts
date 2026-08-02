@@ -6,7 +6,43 @@
 //   ANTHROPIC_API_KEY
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.70.1';
-import { DEPARTAMENTOS_VALIDOS, RUBROS_VALIDOS } from '../_shared/catalogo.ts';
+
+// Debe reflejar src/constants/rubros.ts y src/constants/departamentos.ts.
+// (Archivo autocontenido a propósito: se puede pegar entero en el editor de
+// Supabase Dashboard sin depender de imports relativos a otras carpetas.)
+const RUBROS_VALIDOS = [
+  'electricista',
+  'plomero',
+  'jardineria',
+  'limpieza',
+  'pintura',
+  'gasista',
+  'cerrajero',
+  'mudanzas',
+  'otro',
+] as const;
+
+const DEPARTAMENTOS_VALIDOS = [
+  'Artigas',
+  'Canelones',
+  'Cerro Largo',
+  'Colonia',
+  'Durazno',
+  'Flores',
+  'Florida',
+  'Lavalleja',
+  'Maldonado',
+  'Montevideo',
+  'Paysandú',
+  'Río Negro',
+  'Rivera',
+  'Rocha',
+  'Salto',
+  'San José',
+  'Soriano',
+  'Tacuarembó',
+  'Treinta y Tres',
+] as const;
 
 const ANTHROPIC_MODEL = 'claude-haiku-4-5';
 const MAX_TEXTO_LENGTH = 2000;
