@@ -42,6 +42,9 @@ supabase/
     0001_profiles.sql         Tabla `profiles` + políticas RLS
     0002_ubicacion_y_resenas.sql  Ubicación/departamento/calificación en profiles + tabla `resenas`
   seed.sql                    Trabajadores ficticios de prueba repartidos en varios departamentos
+  functions/
+    generar-perfil/           Edge Function: arma rubro/descripción/departamento con Claude (Anthropic)
+    _shared/catalogo.ts        Rubros y departamentos válidos (debe reflejar los de src/constants)
 ```
 
 ## Setup
@@ -53,7 +56,8 @@ supabase/
    - `supabase/migrations/0001_profiles.sql`
    - `supabase/migrations/0002_ubicacion_y_resenas.sql`
    - `supabase/seed.sql` (opcional, carga trabajadores de prueba para ver el listado funcionando)
-3. Instalá dependencias y arrancá la app:
+3. Desplegá la Edge Function `generar-perfil` y configurá su secreto (ver sección siguiente).
+4. Instalá dependencias y arrancá la app:
 
    ```bash
    npm install
@@ -61,6 +65,32 @@ supabase/
    ```
 
    Luego abrí la app en Expo Go (Android/iOS) o `npm run web` para probar en el navegador.
+
+## Perfil de trabajador generado por IA
+
+En el registro de trabajador hay una opción "Describir con IA": el trabajador escribe (o dicta)
+un texto libre contando lo que hace, y la Edge Function `generar-perfil` le pide a Claude (Anthropic)
+que devuelva rubro / descripción / departamento en JSON estructurado. El trabajador siempre revisa
+y puede editar ese resultado antes de confirmar — nunca se guarda directo.
+
+Para habilitarlo:
+
+1. Instalá el [CLI de Supabase](https://supabase.com/docs/guides/cli) si no lo tenés, y logueate
+   (`supabase login`) y vinculá el proyecto (`supabase link --project-ref <tu-project-ref>`).
+2. Configurá el secreto con tu clave de API de Claude (nunca se expone al cliente):
+
+   ```bash
+   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+   ```
+
+3. Desplegá la función:
+
+   ```bash
+   supabase functions deploy generar-perfil
+   ```
+
+La app la invoca vía `supabase.functions.invoke('generar-perfil', { body: { texto } })` usando el
+anon key normal — no hace falta ninguna variable de entorno adicional del lado del cliente.
 
 ## Estado actual (MVP en progreso)
 
@@ -71,6 +101,7 @@ supabase/
       ordenado por cercanía real (lat/lng)
 - [x] Perfil completo del trabajador con descripción, historial de trabajos y reseñas
 - [x] Reseñas e historial de trabajos (calificación promedio se actualiza sola con un trigger)
-- [ ] Perfil de trabajador editable desde la app (foto, descripción, precio orientativo)
-- [ ] Generación de perfil por IA a partir de texto/audio libre
+- [x] Generación de perfil por IA a partir de texto libre al registrarse (con revisión/edición antes de guardar)
+- [ ] Perfil de trabajador editable desde la app luego del registro (foto, descripción, precio orientativo)
+- [ ] Dictado por audio (hoy funciona vía el micrófono del teclado del sistema, no hay grabación propia)
 - [ ] Plan premium (visibilidad destacada) — el campo `es_premium` ya existe y se muestra en la tarjeta

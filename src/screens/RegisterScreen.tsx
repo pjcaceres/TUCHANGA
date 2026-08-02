@@ -1,4 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { FunctionsHttpError } from '@supabase/supabase-js';
+import * as Location from 'expo-location';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -11,6 +13,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import DepartamentoSelector from '../components/DepartamentoSelector';
+import {
+  DEPARTAMENTO_POR_DEFECTO,
+  departamentoMasCercano,
+  type Departamento,
+} from '../constants/departamentos';
 import { RUBROS, type RubroId } from '../constants/rubros';
 import { colors } from '../constants/theme';
 import { supabase } from '../lib/supabase';
@@ -18,6 +26,11 @@ import type { AuthStackParamList } from '../navigation/types';
 import type { TipoUsuario } from '../types/database';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
+
+type ModoPerfil = 'manual' | 'ia';
+
+const TEXTO_LIBRE_MIN = 10;
+const TEXTO_LIBRE_MAX = 2000;
 
 export default function RegisterScreen({ navigation }: Props) {
   const [tipoUsuario, setTipoUsuario] = useState<TipoUsuario>('trabajador');
@@ -29,6 +42,68 @@ export default function RegisterScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmarEmail, setConfirmarEmail] = useState(false);
+
+  const [modoPerfil, setModoPerfil] = useState<ModoPerfil>('manual');
+  const [textoLibre, setTextoLibre] = useState('');
+  const [descripcion, setDescripcion] = useState('');
+  const [departamento, setDepartamento] = useState<Departamento | null>(null);
+  const [generandoIA, setGenerandoIA] = useState(false);
+  const [iaError, setIaError] = useState<string | null>(null);
+  const [iaGenerado, setIaGenerado] = useState(false);
+  const [detectandoUbicacion, setDetectandoUbicacion] = useState(false);
+
+  const detectarUbicacion = async () => {
+    setDetectandoUbicacion(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+
+      const posicion = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      setDepartamento(
+        departamentoMasCercano(posicion.coords.latitude, posicion.coords.longitude)
+      );
+    } catch {
+      // si falla, el usuario puede elegir el departamento manualmente
+    } finally {
+      setDetectandoUbicacion(false);
+    }
+  };
+
+  const generarConIA = async () => {
+    setIaError(null);
+
+    const texto = textoLibre.trim();
+    if (texto.length < TEXTO_LIBRE_MIN) {
+      setIaError(`Contanos un poco más sobre tu trabajo (mínimo ${TEXTO_LIBRE_MIN} caracteres).`);
+      return;
+    }
+
+    setGenerandoIA(true);
+
+    const { data, error: fnError } = await supabase.functions.invoke<{
+      rubro: RubroId;
+      descripcion: string;
+      departamento: Departamento | null;
+    }>('generar-perfil', {
+      body: { texto },
+    });
+
+    setGenerandoIA(false);
+
+    if (fnError) {
+      setIaError(await traducirErrorFuncion(fnError));
+      return;
+    }
+
+    if (data) {
+      setRubro(data.rubro);
+      setDescripcion(data.descripcion);
+      setDepartamento(data.departamento);
+      setIaGenerado(true);
+    }
+  };
 
   const handleRegister = async () => {
     setError(null);
@@ -68,6 +143,8 @@ export default function RegisterScreen({ navigation }: Props) {
         nombre: nombre.trim(),
         telefono: telefono.trim() || null,
         rubro: tipoUsuario === 'trabajador' ? rubro : null,
+        descripcion: tipoUsuario === 'trabajador' ? descripcion.trim() || null : null,
+        departamento: tipoUsuario === 'trabajador' ? departamento : null,
       });
 
       setLoading(false);
@@ -176,20 +253,123 @@ export default function RegisterScreen({ navigation }: Props) {
 
           {tipoUsuario === 'trabajador' && (
             <>
-              <Text style={styles.label}>Rubro principal</Text>
-              <View style={styles.rubroWrap}>
-                {RUBROS.map((r) => (
-                  <Pressable
-                    key={r.id}
-                    style={[styles.chip, rubro === r.id && styles.chipActive]}
-                    onPress={() => setRubro(r.id)}
+              <Text style={styles.label}>¿Cómo querés armar tu perfil?</Text>
+              <View style={styles.toggleRow}>
+                <Pressable
+                  style={[styles.toggleButton, modoPerfil === 'manual' && styles.toggleButtonActive]}
+                  onPress={() => setModoPerfil('manual')}
+                >
+                  <Text
+                    style={[styles.toggleText, modoPerfil === 'manual' && styles.toggleTextActive]}
                   >
-                    <Text style={[styles.chipText, rubro === r.id && styles.chipTextActive]}>
-                      {r.label}
-                    </Text>
-                  </Pressable>
-                ))}
+                    Completar a mano
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.toggleButton, modoPerfil === 'ia' && styles.toggleButtonActive]}
+                  onPress={() => setModoPerfil('ia')}
+                >
+                  <Text style={[styles.toggleText, modoPerfil === 'ia' && styles.toggleTextActive]}>
+                    Describir con IA
+                  </Text>
+                </Pressable>
               </View>
+
+              {modoPerfil === 'manual' ? (
+                <>
+                  <Text style={styles.label}>Rubro principal</Text>
+                  <View style={styles.rubroWrap}>
+                    {RUBROS.map((r) => (
+                      <Pressable
+                        key={r.id}
+                        style={[styles.chip, rubro === r.id && styles.chipActive]}
+                        onPress={() => setRubro(r.id)}
+                      >
+                        <Text style={[styles.chipText, rubro === r.id && styles.chipTextActive]}>
+                          {r.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.label}>Contanos qué hacés</Text>
+                  <Text style={styles.helperText}>
+                    Escribí (o dictá con el micrófono del teclado) una descripción libre: qué
+                    hacés, tu experiencia y en qué zona trabajás. Por ejemplo: "Soy electricista,
+                    hago instalaciones y arreglos, trabajo en Montevideo zona Pocitos y Malvín,
+                    tengo 10 años de experiencia".
+                  </Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Contanos sobre tu trabajo…"
+                    placeholderTextColor={colors.textMuted}
+                    multiline
+                    numberOfLines={4}
+                    maxLength={TEXTO_LIBRE_MAX}
+                    value={textoLibre}
+                    onChangeText={setTextoLibre}
+                    editable={!loading && !generandoIA}
+                  />
+
+                  {iaError ? <Text style={styles.errorText}>{iaError}</Text> : null}
+
+                  <Pressable
+                    style={[styles.aiButton, generandoIA && styles.aiButtonDisabled]}
+                    onPress={generarConIA}
+                    disabled={generandoIA || loading}
+                  >
+                    {generandoIA ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={styles.aiButtonText}>✨ Generar perfil con IA</Text>
+                    )}
+                  </Pressable>
+
+                  {iaGenerado && (
+                    <View style={styles.revisionBox}>
+                      <Text style={styles.revisionTitle}>Revisá y editá antes de confirmar</Text>
+
+                      <Text style={styles.label}>Rubro</Text>
+                      <View style={styles.rubroWrap}>
+                        {RUBROS.map((r) => (
+                          <Pressable
+                            key={r.id}
+                            style={[styles.chip, rubro === r.id && styles.chipActive]}
+                            onPress={() => setRubro(r.id)}
+                          >
+                            <Text
+                              style={[styles.chipText, rubro === r.id && styles.chipTextActive]}
+                            >
+                              {r.label}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+
+                      <Text style={styles.label}>Departamento</Text>
+                      <DepartamentoSelector
+                        departamento={departamento ?? DEPARTAMENTO_POR_DEFECTO}
+                        onSeleccionar={setDepartamento}
+                        onUsarUbicacion={detectarUbicacion}
+                        detectando={detectandoUbicacion}
+                      />
+
+                      <Text style={styles.label}>Descripción</Text>
+                      <TextInput
+                        style={[styles.input, styles.textArea]}
+                        multiline
+                        numberOfLines={4}
+                        maxLength={600}
+                        value={descripcion}
+                        onChangeText={setDescripcion}
+                        editable={!loading}
+                      />
+                    </View>
+                  )}
+                </>
+              )}
             </>
           )}
 
@@ -227,6 +407,20 @@ function traducirError(message: string): string {
     return 'Ya existe una cuenta con ese email.';
   }
   return message;
+}
+
+async function traducirErrorFuncion(error: unknown): Promise<string> {
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const body = await error.context.json();
+      if (typeof body?.error === 'string') {
+        return body.error;
+      }
+    } catch {
+      // el body no era JSON válido, seguimos con el mensaje genérico
+    }
+  }
+  return 'No pudimos generar el perfil con IA. Probá de nuevo o completalo a mano.';
 }
 
 const styles = StyleSheet.create({
@@ -299,6 +493,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 6,
   },
+  helperText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: 10,
+    lineHeight: 17,
+  },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -308,6 +508,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
     backgroundColor: colors.background,
+  },
+  textArea: {
+    minHeight: 90,
+    textAlignVertical: 'top',
   },
   rubroWrap: {
     flexDirection: 'row',
@@ -333,6 +537,33 @@ const styles = StyleSheet.create({
   chipTextActive: {
     color: '#fff',
     fontWeight: '600',
+  },
+  aiButton: {
+    backgroundColor: colors.primaryDark,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  aiButtonDisabled: {
+    opacity: 0.7,
+  },
+  aiButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  revisionBox: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  revisionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+    marginBottom: 4,
   },
   errorText: {
     color: colors.error,
