@@ -4,6 +4,7 @@ import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 're
 import StarRating from '../components/StarRating';
 import { rubroLabel } from '../constants/rubros';
 import { colors } from '../constants/theme';
+import { esPremiumVigente } from '../lib/premium';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
 import type { Profile, Resena } from '../types/database';
@@ -84,7 +85,14 @@ export default function WorkerProfileScreen({ route }: Props) {
             <Text style={styles.photoInitial}>{inicial}</Text>
           </View>
         )}
-        <Text style={styles.nombre}>{trabajador.nombre}</Text>
+        <View style={styles.nombreRow}>
+          <Text style={styles.nombre}>{trabajador.nombre}</Text>
+          {esPremiumVigente(trabajador) && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>Destacado</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.rubro}>{rubroLabel(trabajador.rubro)}</Text>
         <StarRating
           calificacion={trabajador.calificacion_promedio}
@@ -192,10 +200,26 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '700',
   },
+  nombreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   nombre: {
     fontSize: 20,
     fontWeight: '700',
     color: colors.text,
+  },
+  badge: {
+    backgroundColor: '#FDECC8',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#8A5A00',
   },
   rubro: {
     fontSize: 14,

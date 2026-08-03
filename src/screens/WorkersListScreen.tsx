@@ -20,6 +20,7 @@ import {
 import { RUBROS, type RubroId } from '../constants/rubros';
 import { colors } from '../constants/theme';
 import { distanciaKm } from '../lib/geo';
+import { esPremiumVigente } from '../lib/premium';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
 import type { Profile } from '../types/database';
@@ -120,6 +121,10 @@ export default function WorkersListScreen({ navigation }: Props) {
     }));
 
     conDistancia.sort((a, b) => {
+      const premiumA = esPremiumVigente(a.trabajador) ? 1 : 0;
+      const premiumB = esPremiumVigente(b.trabajador) ? 1 : 0;
+      if (premiumA !== premiumB) return premiumB - premiumA;
+
       if (a.distancia !== null && b.distancia !== null) return a.distancia - b.distancia;
       if (a.distancia !== null) return -1;
       if (b.distancia !== null) return 1;
@@ -133,9 +138,14 @@ export default function WorkersListScreen({ navigation }: Props) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>TuChanga</Text>
-        <Pressable onPress={() => supabase.auth.signOut()}>
-          <Text style={styles.logout}>Salir</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable onPress={() => navigation.navigate('Premium')}>
+            <Text style={styles.premiumLink}>⭐ Premium</Text>
+          </Pressable>
+          <Pressable onPress={() => supabase.auth.signOut()}>
+            <Text style={styles.logout}>Salir</Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.filtersSection}>
@@ -229,6 +239,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
+    color: colors.primary,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  premiumLink: {
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.primary,
   },
   logout: {

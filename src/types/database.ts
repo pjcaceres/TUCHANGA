@@ -14,6 +14,7 @@ export type Profile = {
   precio_orientativo: number | null;
   foto_url: string | null;
   es_premium: boolean;
+  premium_hasta: string | null;
   departamento: Departamento | null;
   lat: number | null;
   lng: number | null;

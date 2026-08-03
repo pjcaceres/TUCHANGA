@@ -1,6 +1,7 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { rubroLabel } from '../constants/rubros';
 import { colors } from '../constants/theme';
+import { esPremiumVigente } from '../lib/premium';
 import type { Profile } from '../types/database';
 import StarRating from './StarRating';
 
@@ -31,7 +32,7 @@ export default function WorkerCard({ trabajador, distanciaKm, onPress }: Props) 
           <Text style={styles.nombre} numberOfLines={1}>
             {trabajador.nombre}
           </Text>
-          {trabajador.es_premium && (
+          {esPremiumVigente(trabajador) && (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>Destacado</Text>
             </View>

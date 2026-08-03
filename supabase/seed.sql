@@ -26,40 +26,40 @@ on conflict (id) do nothing;
 --    probar el orden por cercanía, y uno en cada uno de otros 4 departamentos)
 insert into public.profiles (
   id, tipo_usuario, nombre, telefono, barrio, rubro, descripcion, precio_orientativo,
-  foto_url, es_premium, departamento, lat, lng
+  foto_url, es_premium, premium_hasta, departamento, lat, lng
 )
 values
   ('00000000-0000-0000-0000-000000000001', 'trabajador', 'Juan Fernández', '099111001', 'Centro', 'electricista',
    'Electricista matriculado, más de 10 años de experiencia. Instalaciones, tableros y arreglos urgentes.', 800,
-   'https://i.pravatar.cc/300?img=12', true, 'Montevideo', -34.9011, -56.1645),
+   'https://i.pravatar.cc/300?img=12', true, now() + interval '30 days', 'Montevideo', -34.9011, -56.1645),
 
   ('00000000-0000-0000-0000-000000000002', 'trabajador', 'Lucía Gómez', '099111002', 'Pocitos', 'plomero',
    'Plomera y sanitaria. Destapes, pérdidas de agua y arreglos de baño y cocina.', 750,
-   'https://i.pravatar.cc/300?img=32', false, 'Montevideo', -34.9122, -56.1467),
+   'https://i.pravatar.cc/300?img=32', false, null, 'Montevideo', -34.9122, -56.1467),
 
   ('00000000-0000-0000-0000-000000000004', 'trabajador', 'Rosa Ibáñez', '099111004', 'Cordón', 'limpieza',
    'Limpieza de hogares y oficinas. Trabajo por hora o por trabajo cerrado.', 400,
-   'https://i.pravatar.cc/300?img=45', false, 'Montevideo', -34.9070, -56.1780),
+   'https://i.pravatar.cc/300?img=45', false, null, 'Montevideo', -34.9070, -56.1780),
 
   ('00000000-0000-0000-0000-000000000006', 'trabajador', 'Pablo Núñez', '099111006', 'Malvín', 'gasista',
    'Gasista matriculado. Instalación y habilitación de artefactos a gas.', 900,
-   'https://i.pravatar.cc/300?img=51', true, 'Montevideo', -34.8958, -56.1287),
+   'https://i.pravatar.cc/300?img=51', true, now() + interval '15 days', 'Montevideo', -34.8958, -56.1287),
 
   ('00000000-0000-0000-0000-000000000003', 'trabajador', 'Martín Silva', '099111003', 'Ciudad de la Costa', 'jardineria',
    'Corte de pasto, poda y mantenimiento de jardines. Presupuesto sin cargo.', 600,
-   'https://i.pravatar.cc/300?img=13', false, 'Canelones', -34.7833, -55.9500),
+   'https://i.pravatar.cc/300?img=13', false, null, 'Canelones', -34.7833, -55.9500),
 
   ('00000000-0000-0000-0000-000000000005', 'trabajador', 'Diego Acosta', '099111005', 'Centro', 'pintura',
    'Pintura de interiores y exteriores, obra nueva y reciclaje.', 700,
-   'https://i.pravatar.cc/300?img=14', false, 'Maldonado', -34.9011, -54.9578),
+   'https://i.pravatar.cc/300?img=14', true, now() - interval '5 days', 'Maldonado', -34.9011, -54.9578),
 
   ('00000000-0000-0000-0000-000000000007', 'trabajador', 'Carlos Rodríguez', '099111007', 'Centro', 'cerrajero',
    'Cerrajería en general, apertura de puertas y cambio de cerraduras las 24hs.', 650,
-   'https://i.pravatar.cc/300?img=15', false, 'Salto', -31.3833, -57.9667),
+   'https://i.pravatar.cc/300?img=15', false, null, 'Salto', -31.3833, -57.9667),
 
   ('00000000-0000-0000-0000-000000000008', 'trabajador', 'Ana Martínez', '099111008', 'Centro', 'mudanzas',
    'Mudanzas y fletes dentro y fuera de Montevideo. Contamos con camión propio.', 1200,
-   'https://i.pravatar.cc/300?img=47', true, 'Colonia', -34.4722, -57.8433)
+   'https://i.pravatar.cc/300?img=47', true, now() + interval '30 days', 'Colonia', -34.4722, -57.8433)
 on conflict (id) do nothing;
 
 -- 3) Reseñas / historial de trabajos de cada trabajador

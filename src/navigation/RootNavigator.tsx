@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import LoginScreen from '../screens/LoginScreen';
+import PremiumScreen from '../screens/PremiumScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import WorkerProfileScreen from '../screens/WorkerProfileScreen';
 import WorkersListScreen from '../screens/WorkersListScreen';
@@ -34,6 +35,7 @@ function AppNavigator() {
         component={WorkerProfileScreen}
         options={({ route }) => ({ title: route.params.nombre })}
       />
+      <AppStack.Screen name="Premium" component={PremiumScreen} options={{ title: 'Premium' }} />
     </AppStack.Navigator>
   );
 }

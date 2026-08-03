@@ -33,14 +33,18 @@ src/
   screens/
     LoginScreen.tsx
     RegisterScreen.tsx        Registro con selección de rol (trabajador/cliente) y rubro
-    WorkersListScreen.tsx      Listado de trabajadores: filtro por departamento + rubro, ordenado por cercanía
+    WorkersListScreen.tsx      Listado de trabajadores: filtro por departamento + rubro, premium primero, ordenado por cercanía
     WorkerProfileScreen.tsx    Perfil completo: descripción, historial de trabajos y reseñas
+    PremiumScreen.tsx          Activar/renovar el plan premium (visibilidad + insignia) del propio perfil
   types/
     database.ts               Tipos generados a mano del esquema de Supabase
+  lib/
+    premium.ts                 Vigencia del plan premium (es_premium + premium_hasta)
 supabase/
   migrations/
     0001_profiles.sql         Tabla `profiles` + políticas RLS
     0002_ubicacion_y_resenas.sql  Ubicación/departamento/calificación en profiles + tabla `resenas`
+    0003_premium.sql           Vencimiento del plan premium (`premium_hasta`)
   seed.sql                    Trabajadores ficticios de prueba repartidos en varios departamentos
   functions/
     generar-perfil/           Edge Function: arma rubro/descripción/departamento con Claude (Anthropic)
@@ -54,6 +58,7 @@ supabase/
    si usás el CLI de Supabase):
    - `supabase/migrations/0001_profiles.sql`
    - `supabase/migrations/0002_ubicacion_y_resenas.sql`
+   - `supabase/migrations/0003_premium.sql`
    - `supabase/seed.sql` (opcional, carga trabajadores de prueba para ver el listado funcionando)
 3. Desplegá la Edge Function `generar-perfil` y configurá su secreto (ver sección siguiente).
 4. Instalá dependencias y arrancá la app:
@@ -90,6 +95,22 @@ También se puede hacer con el [CLI de Supabase](https://supabase.com/docs/guide
 La app la invoca vía `supabase.functions.invoke('generar-perfil', { body: { texto } })` usando el
 anon key normal — no hace falta ninguna variable de entorno adicional del lado del cliente.
 
+## Plan premium (freemium)
+
+Un trabajador con plan premium vigente (`es_premium = true` y `premium_hasta` en el futuro, o sin
+vencimiento) aparece primero en el listado —dentro del mismo departamento/rubro filtrado, antes que
+los perfiles gratuitos, y ambos grupos se siguen ordenando por cercanía— y muestra la insignia
+"Destacado" en su tarjeta y en su perfil. Un plan vencido deja de tener prioridad y de mostrar la
+insignia automáticamente, sin necesidad de ningún job en el servidor: la vigencia se calcula al
+vuelo comparando `premium_hasta` con la fecha actual (`src/lib/premium.ts`).
+
+Desde el listado, cualquier trabajador puede tocar "⭐ Premium" en el header para ir a la pantalla
+de activación, que explica los beneficios y tiene un botón "Hacerme Premium por 30 días" (o
+"Renovar 30 días más" si ya está activo). **Todavía no hay cobro real**: el botón simplemente
+actualiza `es_premium`/`premium_hasta` en su propio perfil (permitido por la política RLS de
+"editar mi perfil" ya existente). Cuando se integre un medio de pago (Mercado Pago u otro), ese
+botón pasa a iniciar el cobro y sólo al confirmarse se actualizan esos mismos campos.
+
 ## Estado actual (MVP en progreso)
 
 - [x] Estructura base del proyecto (Expo + TypeScript + Supabase)
@@ -100,6 +121,7 @@ anon key normal — no hace falta ninguna variable de entorno adicional del lado
 - [x] Perfil completo del trabajador con descripción, historial de trabajos y reseñas
 - [x] Reseñas e historial de trabajos (calificación promedio se actualiza sola con un trigger)
 - [x] Generación de perfil por IA a partir de texto libre al registrarse (con revisión/edición antes de guardar)
+- [x] Plan premium: prioridad en el listado + insignia "Destacado" + pantalla de activación (sin cobro real todavía)
 - [ ] Perfil de trabajador editable desde la app luego del registro (foto, descripción, precio orientativo)
 - [ ] Dictado por audio (hoy funciona vía el micrófono del teclado del sistema, no hay grabación propia)
-- [ ] Plan premium (visibilidad destacada) — el campo `es_premium` ya existe y se muestra en la tarjeta
+- [ ] Cobro real del plan premium (Mercado Pago u otro medio) — hoy se activa sin costo para probar la lógica
