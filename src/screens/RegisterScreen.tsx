@@ -22,6 +22,7 @@ import {
 import { RUBROS, type RubroId } from '../constants/rubros';
 import { colors } from '../constants/theme';
 import { supabase } from '../lib/supabase';
+import { esTelefonoValido, parsePrecio } from '../lib/validacion';
 import type { AuthStackParamList } from '../navigation/types';
 import type { TipoUsuario } from '../types/database';
 
@@ -39,6 +40,7 @@ export default function RegisterScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [telefono, setTelefono] = useState('');
   const [rubro, setRubro] = useState<RubroId | null>(null);
+  const [precioOrientativo, setPrecioOrientativo] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmarEmail, setConfirmarEmail] = useState(false);
@@ -100,7 +102,9 @@ export default function RegisterScreen({ navigation }: Props) {
     if (data) {
       setRubro(data.rubro);
       setDescripcion(data.descripcion);
-      setDepartamento(data.departamento);
+      if (data.departamento) {
+        setDepartamento(data.departamento);
+      }
       setIaGenerado(true);
     }
   };
@@ -116,9 +120,28 @@ export default function RegisterScreen({ navigation }: Props) {
       setError('La contraseña debe tener al menos 6 caracteres.');
       return;
     }
-    if (tipoUsuario === 'trabajador' && !rubro) {
-      setError('Elegí tu rubro principal.');
+    if (telefono.trim() && !esTelefonoValido(telefono)) {
+      setError('El teléfono no parece válido. Usá un formato como 099 123 456 o 2487 1234.');
       return;
+    }
+
+    let precio: number | null = null;
+    if (tipoUsuario === 'trabajador') {
+      if (!rubro) {
+        setError('Elegí tu rubro principal.');
+        return;
+      }
+      if (!departamento) {
+        setError('Elegí el departamento donde trabajás.');
+        return;
+      }
+      if (precioOrientativo.trim()) {
+        precio = parsePrecio(precioOrientativo);
+        if (precio === null || precio <= 0) {
+          setError('El precio orientativo tiene que ser un número mayor a 0.');
+          return;
+        }
+      }
     }
 
     setLoading(true);
@@ -145,6 +168,7 @@ export default function RegisterScreen({ navigation }: Props) {
         rubro: tipoUsuario === 'trabajador' ? rubro : null,
         descripcion: tipoUsuario === 'trabajador' ? descripcion.trim() || null : null,
         departamento: tipoUsuario === 'trabajador' ? departamento : null,
+        precio_orientativo: tipoUsuario === 'trabajador' ? precio : null,
       });
 
       setLoading(false);
@@ -206,6 +230,8 @@ export default function RegisterScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.form}>
+          <Text style={styles.sectionHeader}>Datos de la cuenta</Text>
+
           <Text style={styles.label}>Nombre completo</Text>
           <TextInput
             style={styles.input}
@@ -243,7 +269,7 @@ export default function RegisterScreen({ navigation }: Props) {
           <Text style={styles.label}>Teléfono (opcional)</Text>
           <TextInput
             style={styles.input}
-            placeholder="09X XXX XXX"
+            placeholder="099 123 456"
             placeholderTextColor={colors.textMuted}
             keyboardType="phone-pad"
             value={telefono}
@@ -253,6 +279,9 @@ export default function RegisterScreen({ navigation }: Props) {
 
           {tipoUsuario === 'trabajador' && (
             <>
+              <View style={styles.divider} />
+              <Text style={styles.sectionHeader}>Tu perfil de trabajador</Text>
+
               <Text style={styles.label}>¿Cómo querés armar tu perfil?</Text>
               <View style={styles.toggleRow}>
                 <Pressable
@@ -275,6 +304,25 @@ export default function RegisterScreen({ navigation }: Props) {
                 </Pressable>
               </View>
 
+              <Text style={styles.label}>Departamento</Text>
+              <DepartamentoSelector
+                departamento={departamento ?? DEPARTAMENTO_POR_DEFECTO}
+                onSeleccionar={setDepartamento}
+                onUsarUbicacion={detectarUbicacion}
+                detectando={detectandoUbicacion}
+              />
+
+              <Text style={styles.label}>Precio orientativo por trabajo (opcional)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ej: 800"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="numeric"
+                value={precioOrientativo}
+                onChangeText={setPrecioOrientativo}
+                editable={!loading}
+              />
+
               {modoPerfil === 'manual' ? (
                 <>
                   <Text style={styles.label}>Rubro principal</Text>
@@ -291,6 +339,19 @@ export default function RegisterScreen({ navigation }: Props) {
                       </Pressable>
                     ))}
                   </View>
+
+                  <Text style={styles.label}>Descripción (opcional)</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Contanos brevemente qué hacés y tu experiencia…"
+                    placeholderTextColor={colors.textMuted}
+                    multiline
+                    numberOfLines={4}
+                    maxLength={600}
+                    value={descripcion}
+                    onChangeText={setDescripcion}
+                    editable={!loading}
+                  />
                 </>
               ) : (
                 <>
@@ -347,14 +408,6 @@ export default function RegisterScreen({ navigation }: Props) {
                           </Pressable>
                         ))}
                       </View>
-
-                      <Text style={styles.label}>Departamento</Text>
-                      <DepartamentoSelector
-                        departamento={departamento ?? DEPARTAMENTO_POR_DEFECTO}
-                        onSeleccionar={setDepartamento}
-                        onUsarUbicacion={detectarUbicacion}
-                        detectando={detectandoUbicacion}
-                      />
 
                       <Text style={styles.label}>Descripción</Text>
                       <TextInput
@@ -486,11 +539,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  sectionHeader: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginTop: 20,
+    marginBottom: 16,
+  },
   label: {
     fontSize: 13,
     fontWeight: '600',
     color: colors.text,
-    marginTop: 12,
+    marginTop: 14,
     marginBottom: 6,
   },
   helperText: {
@@ -573,17 +638,22 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: colors.primary,
     borderRadius: 10,
-    paddingVertical: 14,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 24,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   buttonPressed: {
     backgroundColor: colors.primaryDark,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
   },
   linkContainer: {
     marginTop: 16,

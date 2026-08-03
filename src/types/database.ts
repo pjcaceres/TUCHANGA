@@ -26,6 +26,7 @@ export type Profile = {
 export type Resena = {
   id: string;
   trabajador_id: string;
+  cliente_id: string | null;
   cliente_nombre: string;
   trabajo_descripcion: string | null;
   calificacion: number;

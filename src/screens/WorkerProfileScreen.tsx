@@ -1,9 +1,11 @@
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import StarRating from '../components/StarRating';
 import { rubroLabel } from '../constants/rubros';
 import { colors } from '../constants/theme';
+import { useAuth } from '../contexts/AuthContext';
 import { esPremiumVigente } from '../lib/premium';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
@@ -11,51 +13,61 @@ import type { Profile, Resena } from '../types/database';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'WorkerProfile'>;
 
-export default function WorkerProfileScreen({ route }: Props) {
+export default function WorkerProfileScreen({ route, navigation }: Props) {
   const { workerId } = route.params;
+  const { session } = useAuth();
 
   const [trabajador, setTrabajador] = useState<Profile | null>(null);
   const [resenas, setResenas] = useState<Resena[]>([]);
+  const [esCliente, setEsCliente] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelado = false;
+  useFocusEffect(
+    useCallback(() => {
+      let cancelado = false;
+      const userId = session?.user.id;
 
-    async function cargar() {
-      setLoading(true);
-      setError(null);
+      async function cargar() {
+        setLoading(true);
+        setError(null);
 
-      const [perfilResult, resenasResult] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', workerId).single(),
-        supabase
-          .from('resenas')
-          .select('*')
-          .eq('trabajador_id', workerId)
-          .order('created_at', { ascending: false }),
-      ]);
+        const [perfilResult, resenasResult, miPerfilResult] = await Promise.all([
+          supabase.from('profiles').select('*').eq('id', workerId).single(),
+          supabase
+            .from('resenas')
+            .select('*')
+            .eq('trabajador_id', workerId)
+            .order('created_at', { ascending: false }),
+          userId
+            ? supabase.from('profiles').select('tipo_usuario').eq('id', userId).single()
+            : Promise.resolve({ data: null, error: null }),
+        ]);
 
-      if (cancelado) return;
+        if (cancelado) return;
 
-      if (perfilResult.error) {
-        setError(perfilResult.error.message);
-      } else {
-        setTrabajador(perfilResult.data);
+        if (perfilResult.error) {
+          setError(perfilResult.error.message);
+        } else {
+          setTrabajador(perfilResult.data);
+        }
+
+        if (!resenasResult.error) {
+          setResenas(resenasResult.data ?? []);
+        }
+
+        setEsCliente(miPerfilResult.data?.tipo_usuario === 'cliente');
+
+        setLoading(false);
       }
 
-      if (!resenasResult.error) {
-        setResenas(resenasResult.data ?? []);
-      }
+      cargar();
 
-      setLoading(false);
-    }
-
-    cargar();
-
-    return () => {
-      cancelado = true;
-    };
-  }, [workerId]);
+      return () => {
+        cancelado = true;
+      };
+    }, [workerId, session?.user.id])
+  );
 
   if (loading) {
     return (
@@ -74,6 +86,7 @@ export default function WorkerProfileScreen({ route }: Props) {
   }
 
   const inicial = trabajador.nombre.trim().charAt(0).toUpperCase() || '?';
+  const puedeDejarResena = esCliente && trabajador.id !== session?.user.id;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -108,6 +121,20 @@ export default function WorkerProfileScreen({ route }: Props) {
           <Text style={styles.precio}>
             Precio orientativo: ${trabajador.precio_orientativo}
           </Text>
+        )}
+
+        {puedeDejarResena && (
+          <Pressable
+            style={styles.resenaButton}
+            onPress={() =>
+              navigation.navigate('DejarResena', {
+                workerId: trabajador.id,
+                nombreTrabajador: trabajador.nombre,
+              })
+            }
+          >
+            <Text style={styles.resenaButtonText}>✍️ Dejar reseña</Text>
+          </Pressable>
         )}
       </View>
 
@@ -235,6 +262,18 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
     marginTop: 6,
+  },
+  resenaButton: {
+    marginTop: 14,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  resenaButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   section: {
     backgroundColor: colors.surface,

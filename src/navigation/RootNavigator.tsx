@@ -2,6 +2,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import DejarResenaScreen from '../screens/DejarResenaScreen';
 import LoginScreen from '../screens/LoginScreen';
 import PremiumScreen from '../screens/PremiumScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -36,6 +37,11 @@ function AppNavigator() {
         options={({ route }) => ({ title: route.params.nombre })}
       />
       <AppStack.Screen name="Premium" component={PremiumScreen} options={{ title: 'Premium' }} />
+      <AppStack.Screen
+        name="DejarResena"
+        component={DejarResenaScreen}
+        options={{ title: 'Dejar reseña' }}
+      />
     </AppStack.Navigator>
   );
 }
