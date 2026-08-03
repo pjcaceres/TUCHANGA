@@ -44,6 +44,7 @@ export default function RegisterScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmarEmail, setConfirmarEmail] = useState(false);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
   const [modoPerfil, setModoPerfil] = useState<ModoPerfil>('manual');
   const [textoLibre, setTextoLibre] = useState('');
@@ -122,6 +123,10 @@ export default function RegisterScreen({ navigation }: Props) {
     }
     if (telefono.trim() && !esTelefonoValido(telefono)) {
       setError('El teléfono no parece válido. Usá un formato como 099 123 456 o 2487 1234.');
+      return;
+    }
+    if (!aceptaTerminos) {
+      setError('Tenés que aceptar los Términos y Condiciones y la Política de Privacidad.');
       return;
     }
 
@@ -426,12 +431,36 @@ export default function RegisterScreen({ navigation }: Props) {
             </>
           )}
 
+          <View style={styles.checkboxRow}>
+            <Pressable
+              onPress={() => setAceptaTerminos((prev) => !prev)}
+              style={[styles.checkbox, aceptaTerminos && styles.checkboxActivo]}
+              hitSlop={8}
+            >
+              {aceptaTerminos && <Text style={styles.checkboxMarca}>✓</Text>}
+            </Pressable>
+            <Text style={styles.checkboxTexto}>
+              Acepto los{' '}
+              <Text style={styles.checkboxLink} onPress={() => navigation.navigate('Terminos')}>
+                Términos y Condiciones
+              </Text>{' '}
+              y la{' '}
+              <Text style={styles.checkboxLink} onPress={() => navigation.navigate('Privacidad')}>
+                Política de Privacidad
+              </Text>
+            </Text>
+          </View>
+
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <Pressable
-            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+            style={({ pressed }) => [
+              styles.button,
+              pressed && styles.buttonPressed,
+              !aceptaTerminos && styles.buttonDisabled,
+            ]}
             onPress={handleRegister}
-            disabled={loading}
+            disabled={loading || !aceptaTerminos}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
@@ -635,17 +664,57 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 12,
   },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 20,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  checkboxActivo: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkboxMarca: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  checkboxTexto: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.text,
+    lineHeight: 19,
+  },
+  checkboxLink: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
   button: {
     backgroundColor: colors.primary,
     borderRadius: 10,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 16,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 2,
+  },
+  buttonDisabled: {
+    backgroundColor: colors.border,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   buttonPressed: {
     backgroundColor: colors.primaryDark,

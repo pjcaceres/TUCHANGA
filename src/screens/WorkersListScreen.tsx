@@ -142,6 +142,9 @@ export default function WorkersListScreen({ navigation }: Props) {
           <Pressable onPress={() => navigation.navigate('Premium')}>
             <Text style={styles.premiumLink}>⭐ Premium</Text>
           </Pressable>
+          <Pressable onPress={() => navigation.navigate('Configuracion')}>
+            <Text style={styles.logout}>⚙️ Configuración</Text>
+          </Pressable>
           <Pressable onPress={() => supabase.auth.signOut()}>
             <Text style={styles.logout}>Salir</Text>
           </Pressable>

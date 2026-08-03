@@ -1,6 +1,8 @@
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
+  Terminos: undefined;
+  Privacidad: undefined;
 };
 
 export type AppStackParamList = {
@@ -8,4 +10,7 @@ export type AppStackParamList = {
   WorkerProfile: { workerId: string; nombre: string };
   Premium: undefined;
   DejarResena: { workerId: string; nombreTrabajador: string };
+  Configuracion: undefined;
+  Terminos: undefined;
+  Privacidad: undefined;
 };

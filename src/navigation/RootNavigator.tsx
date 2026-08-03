@@ -2,10 +2,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import ConfiguracionScreen from '../screens/ConfiguracionScreen';
 import DejarResenaScreen from '../screens/DejarResenaScreen';
 import LoginScreen from '../screens/LoginScreen';
 import PremiumScreen from '../screens/PremiumScreen';
+import PrivacidadScreen from '../screens/PrivacidadScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import TerminosScreen from '../screens/TerminosScreen';
 import WorkerProfileScreen from '../screens/WorkerProfileScreen';
 import WorkersListScreen from '../screens/WorkersListScreen';
 import { colors } from '../constants/theme';
@@ -19,6 +22,16 @@ function AuthNavigator() {
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
+      <AuthStack.Screen
+        name="Terminos"
+        component={TerminosScreen}
+        options={{ headerShown: true, title: 'Términos y Condiciones' }}
+      />
+      <AuthStack.Screen
+        name="Privacidad"
+        component={PrivacidadScreen}
+        options={{ headerShown: true, title: 'Política de Privacidad' }}
+      />
     </AuthStack.Navigator>
   );
 }
@@ -41,6 +54,21 @@ function AppNavigator() {
         name="DejarResena"
         component={DejarResenaScreen}
         options={{ title: 'Dejar reseña' }}
+      />
+      <AppStack.Screen
+        name="Configuracion"
+        component={ConfiguracionScreen}
+        options={{ title: 'Configuración' }}
+      />
+      <AppStack.Screen
+        name="Terminos"
+        component={TerminosScreen}
+        options={{ title: 'Términos y Condiciones' }}
+      />
+      <AppStack.Screen
+        name="Privacidad"
+        component={PrivacidadScreen}
+        options={{ title: 'Política de Privacidad' }}
       />
     </AppStack.Navigator>
   );

@@ -19,10 +19,14 @@ src/
     StarRatingInput.tsx       Estrellas tap-to-rate (usadas al dejar una reseña)
     WorkerCard.tsx            Tarjeta de trabajador en el listado
     DepartamentoSelector.tsx  Selector de departamento (modal + detección por GPS)
+    MarkdownContent.tsx       Renderiza los documentos legales (títulos, negrita, listas)
   constants/
     rubros.ts                Lista de rubros/oficios del MVP
     departamentos.ts          19 departamentos de Uruguay + detección por cercanía
     theme.ts                 Colores compartidos
+  content/
+    terminos.ts               Términos y Condiciones (copia embebida de tuchanga-terminos-y-condiciones.md)
+    privacidad.ts              Política de Privacidad (copia embebida de tuchanga-politica-de-privacidad.md)
   contexts/
     AuthContext.tsx          Sesión de Supabase Auth disponible en toda la app
   lib/
@@ -30,16 +34,20 @@ src/
     geo.ts                    Distancia entre dos coordenadas (fórmula haversine)
     premium.ts                 Vigencia del plan premium (es_premium + premium_hasta)
     validacion.ts               Validación de teléfono y precio orientativo del registro
+    markdown.ts                 Parser markdown minimalista (headings, negrita, listas, itálica)
   navigation/
     RootNavigator.tsx         Cambia entre stack de auth y stack de la app según la sesión
     types.ts                  Param lists de cada stack
   screens/
     LoginScreen.tsx
-    RegisterScreen.tsx        Registro con selección de rol (trabajador/cliente), rubro/departamento por selector y validaciones
+    RegisterScreen.tsx        Registro con selección de rol (trabajador/cliente), rubro/departamento por selector, validaciones y aceptación de términos
     WorkersListScreen.tsx      Listado de trabajadores: filtro por departamento + rubro, premium primero, ordenado por cercanía
     WorkerProfileScreen.tsx    Perfil completo: descripción, historial de trabajos, reseñas y botón para dejar una reseña
     PremiumScreen.tsx          Activar/renovar el plan premium (visibilidad + insignia) del propio perfil
     DejarResenaScreen.tsx      Formulario de reseña (estrellas + trabajo realizado + comentario) para clientes
+    ConfiguracionScreen.tsx    Acceso a Términos y Privacidad para usuarios logueados
+    TerminosScreen.tsx         Términos y Condiciones con buen formato
+    PrivacidadScreen.tsx       Política de Privacidad con buen formato
   types/
     database.ts               Tipos generados a mano del esquema de Supabase
 supabase/
@@ -125,6 +133,23 @@ pueda dejar una reseña en nombre de otro), el trigger existente recalcula `cali
 `cantidad_resenas` del trabajador, y al volver a su perfil (`useFocusEffect`) la reseña nueva ya
 aparece en el historial.
 
+## Términos y Condiciones / Política de Privacidad
+
+Los dos documentos legales (`tuchanga-terminos-y-condiciones.md` y
+`tuchanga-politica-de-privacidad.md`, en la raíz del repo) están embebidos como constantes de
+TypeScript en `src/content/` y se renderizan con un parser markdown minimalista propio
+(`src/lib/markdown.ts` + `MarkdownContent.tsx`) que soporta títulos, negrita, itálica y listas —
+alcanza para el subconjunto de markdown que usan estos documentos, sin agregar una librería nueva.
+
+**Si editás alguno de los dos `.md` de la raíz, actualizá también su copia en `src/content/`** (no
+hay build step que los sincronice automáticamente).
+
+- En el registro, hay un checkbox obligatorio ("Acepto los Términos y Condiciones y la Política de
+  Privacidad") con los dos nombres como links que abren esas pantallas; el botón "Crear cuenta"
+  queda deshabilitado hasta marcarlo.
+- Ya logueado, "⚙️ Configuración" en el header del listado lleva a una pantalla con acceso a ambos
+  documentos en cualquier momento.
+
 ## Estado actual (MVP en progreso)
 
 - [x] Estructura base del proyecto (Expo + TypeScript + Supabase)
@@ -136,6 +161,7 @@ aparece en el historial.
 - [x] Perfil completo del trabajador con descripción, historial de trabajos y reseñas
 - [x] Reseñas e historial de trabajos (calificación promedio se actualiza sola con un trigger)
 - [x] Los clientes pueden dejar reseñas desde el perfil del trabajador
+- [x] Términos y Condiciones / Política de Privacidad integrados, con aceptación obligatoria al registrarse
 - [x] Generación de perfil por IA a partir de texto libre al registrarse (con revisión/edición antes de guardar)
 - [x] Plan premium: prioridad en el listado + insignia "Destacado" + pantalla de activación (sin cobro real todavía)
 - [ ] Perfil de trabajador editable desde la app luego del registro (foto, precio orientativo)
