@@ -6,6 +6,7 @@ import StarRating from '../components/StarRating';
 import { rubroLabel } from '../constants/rubros';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { haContactadoAlTrabajador, obtenerOCrearConversacion } from '../lib/chat';
 import { esPremiumVigente } from '../lib/premium';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
@@ -20,6 +21,8 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
   const [trabajador, setTrabajador] = useState<Profile | null>(null);
   const [resenas, setResenas] = useState<Resena[]>([]);
   const [esCliente, setEsCliente] = useState(false);
+  const [haContactado, setHaContactado] = useState(false);
+  const [contactando, setContactando] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,7 +59,15 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
           setResenas(resenasResult.data ?? []);
         }
 
-        setEsCliente(miPerfilResult.data?.tipo_usuario === 'cliente');
+        const clienteConfirmado = miPerfilResult.data?.tipo_usuario === 'cliente';
+        setEsCliente(clienteConfirmado);
+
+        if (clienteConfirmado && userId) {
+          const contactado = await haContactadoAlTrabajador(userId, workerId);
+          if (!cancelado) setHaContactado(contactado);
+        } else {
+          setHaContactado(false);
+        }
 
         setLoading(false);
       }
@@ -68,6 +79,28 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
       };
     }, [workerId, session?.user.id])
   );
+
+  const contactar = async () => {
+    const userId = session?.user.id;
+    if (!userId || contactando) return;
+
+    setContactando(true);
+    const { conversacionId, error: errorConversacion } = await obtenerOCrearConversacion(
+      userId,
+      workerId
+    );
+    setContactando(false);
+
+    if (errorConversacion || !conversacionId) {
+      setError(errorConversacion ?? 'No pudimos abrir el chat. Probá de nuevo.');
+      return;
+    }
+
+    navigation.navigate('Chat', {
+      conversacionId,
+      nombreOtroUsuario: trabajador?.nombre ?? 'Chat',
+    });
+  };
 
   if (loading) {
     return (
@@ -86,7 +119,9 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
   }
 
   const inicial = trabajador.nombre.trim().charAt(0).toUpperCase() || '?';
-  const puedeDejarResena = esCliente && trabajador.id !== session?.user.id;
+  const esOtroUsuario = trabajador.id !== session?.user.id;
+  const puedeDejarResena = esCliente && esOtroUsuario && haContactado;
+  const necesitaContactarPrimero = esCliente && esOtroUsuario && !haContactado;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -117,10 +152,14 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
             {[trabajador.barrio, trabajador.departamento].filter(Boolean).join(', ')}
           </Text>
         )}
-        {trabajador.precio_orientativo !== null && (
-          <Text style={styles.precio}>
-            Precio orientativo: ${trabajador.precio_orientativo}
-          </Text>
+        {esOtroUsuario && (
+          <Pressable style={styles.contactarButton} onPress={contactar} disabled={contactando}>
+            {contactando ? (
+              <ActivityIndicator color={colors.primary} />
+            ) : (
+              <Text style={styles.contactarButtonText}>💬 Contactar</Text>
+            )}
+          </Pressable>
         )}
 
         {puedeDejarResena && (
@@ -135,6 +174,12 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
           >
             <Text style={styles.resenaButtonText}>✍️ Dejar reseña</Text>
           </Pressable>
+        )}
+
+        {necesitaContactarPrimero && (
+          <Text style={styles.avisoContacto}>
+            Necesitás contactar a este trabajador antes de poder dejarle una reseña.
+          </Text>
         )}
       </View>
 
@@ -257,14 +302,21 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: 4,
   },
-  precio: {
-    fontSize: 14,
+  contactarButton: {
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  contactarButtonText: {
     color: colors.primary,
+    fontSize: 14,
     fontWeight: '600',
-    marginTop: 6,
   },
   resenaButton: {
-    marginTop: 14,
+    marginTop: 10,
     backgroundColor: colors.primary,
     borderRadius: 10,
     paddingVertical: 10,
@@ -274,6 +326,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  avisoContacto: {
+    marginTop: 10,
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: 'center',
+    paddingHorizontal: 8,
   },
   section: {
     backgroundColor: colors.surface,

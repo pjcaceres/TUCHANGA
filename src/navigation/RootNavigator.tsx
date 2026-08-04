@@ -2,9 +2,11 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import ChatScreen from '../screens/ChatScreen';
 import ConfiguracionScreen from '../screens/ConfiguracionScreen';
 import DejarResenaScreen from '../screens/DejarResenaScreen';
 import LoginScreen from '../screens/LoginScreen';
+import MisChatsScreen from '../screens/MisChatsScreen';
 import PremiumScreen from '../screens/PremiumScreen';
 import PrivacidadScreen from '../screens/PrivacidadScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -69,6 +71,12 @@ function AppNavigator() {
         name="Privacidad"
         component={PrivacidadScreen}
         options={{ title: 'Política de Privacidad' }}
+      />
+      <AppStack.Screen name="MisChats" component={MisChatsScreen} options={{ title: 'Mis chats' }} />
+      <AppStack.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={({ route }) => ({ title: route.params.nombreOtroUsuario })}
       />
     </AppStack.Navigator>
   );

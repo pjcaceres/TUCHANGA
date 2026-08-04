@@ -11,7 +11,6 @@ export type Profile = {
   barrio: string | null;
   rubro: RubroId | null;
   descripcion: string | null;
-  precio_orientativo: number | null;
   foto_url: string | null;
   es_premium: boolean;
   premium_hasta: string | null;
@@ -34,6 +33,22 @@ export type Resena = {
   created_at: string;
 };
 
+export type Conversacion = {
+  id: string;
+  cliente_id: string;
+  trabajador_id: string;
+  created_at: string;
+};
+
+export type Mensaje = {
+  id: string;
+  conversacion_id: string;
+  remitente_id: string;
+  contenido: string;
+  leido: boolean;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -51,6 +66,22 @@ export type Database = {
           calificacion: number;
         };
         Update: Partial<Resena>;
+        Relationships: [];
+      };
+      conversaciones: {
+        Row: Conversacion;
+        Insert: Partial<Conversacion> & { cliente_id: string; trabajador_id: string };
+        Update: Partial<Conversacion>;
+        Relationships: [];
+      };
+      mensajes: {
+        Row: Mensaje;
+        Insert: Partial<Mensaje> & {
+          conversacion_id: string;
+          remitente_id: string;
+          contenido: string;
+        };
+        Update: Partial<Mensaje>;
         Relationships: [];
       };
     };

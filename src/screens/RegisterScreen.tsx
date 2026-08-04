@@ -22,7 +22,7 @@ import {
 import { RUBROS, type RubroId } from '../constants/rubros';
 import { colors } from '../constants/theme';
 import { supabase } from '../lib/supabase';
-import { esTelefonoValido, parsePrecio } from '../lib/validacion';
+import { esTelefonoValido } from '../lib/validacion';
 import type { AuthStackParamList } from '../navigation/types';
 import type { TipoUsuario } from '../types/database';
 
@@ -40,7 +40,6 @@ export default function RegisterScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [telefono, setTelefono] = useState('');
   const [rubro, setRubro] = useState<RubroId | null>(null);
-  const [precioOrientativo, setPrecioOrientativo] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmarEmail, setConfirmarEmail] = useState(false);
@@ -130,7 +129,6 @@ export default function RegisterScreen({ navigation }: Props) {
       return;
     }
 
-    let precio: number | null = null;
     if (tipoUsuario === 'trabajador') {
       if (!rubro) {
         setError('Elegí tu rubro principal.');
@@ -139,13 +137,6 @@ export default function RegisterScreen({ navigation }: Props) {
       if (!departamento) {
         setError('Elegí el departamento donde trabajás.');
         return;
-      }
-      if (precioOrientativo.trim()) {
-        precio = parsePrecio(precioOrientativo);
-        if (precio === null || precio <= 0) {
-          setError('El precio orientativo tiene que ser un número mayor a 0.');
-          return;
-        }
       }
     }
 
@@ -173,7 +164,6 @@ export default function RegisterScreen({ navigation }: Props) {
         rubro: tipoUsuario === 'trabajador' ? rubro : null,
         descripcion: tipoUsuario === 'trabajador' ? descripcion.trim() || null : null,
         departamento: tipoUsuario === 'trabajador' ? departamento : null,
-        precio_orientativo: tipoUsuario === 'trabajador' ? precio : null,
       });
 
       setLoading(false);
@@ -315,17 +305,6 @@ export default function RegisterScreen({ navigation }: Props) {
                 onSeleccionar={setDepartamento}
                 onUsarUbicacion={detectarUbicacion}
                 detectando={detectandoUbicacion}
-              />
-
-              <Text style={styles.label}>Precio orientativo por trabajo (opcional)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ej: 800"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="numeric"
-                value={precioOrientativo}
-                onChangeText={setPrecioOrientativo}
-                editable={!loading}
               />
 
               {modoPerfil === 'manual' ? (
