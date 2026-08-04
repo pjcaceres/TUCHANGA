@@ -341,10 +341,9 @@ export default function RegisterScreen({ navigation }: Props) {
                 <>
                   <Text style={styles.label}>Contanos qué hacés</Text>
                   <Text style={styles.helperText}>
-                    Escribí (o dictá con el micrófono del teclado) una descripción libre: qué
-                    hacés, tu experiencia y en qué zona trabajás. Por ejemplo: "Soy electricista,
-                    hago instalaciones y arreglos, trabajo en Montevideo zona Pocitos y Malvín,
-                    tengo 10 años de experiencia".
+                    Escribí una descripción libre: qué hacés, tu experiencia y en qué zona
+                    trabajás. Por ejemplo: "Soy electricista, hago instalaciones y arreglos,
+                    trabajo en Montevideo zona Pocitos y Malvín, tengo 10 años de experiencia".
                   </Text>
                   <TextInput
                     style={[styles.input, styles.textArea]}
