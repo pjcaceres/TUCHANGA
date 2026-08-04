@@ -1,6 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../constants/theme';
+import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Configuracion'>;
@@ -15,6 +16,9 @@ export default function ConfiguracionScreen({ navigation }: Props) {
       <Pressable style={styles.item} onPress={() => navigation.navigate('Privacidad')}>
         <Text style={styles.itemText}>Política de Privacidad</Text>
         <Text style={styles.chevron}>›</Text>
+      </Pressable>
+      <Pressable style={styles.item} onPress={() => supabase.auth.signOut()}>
+        <Text style={styles.itemTextSalir}>Cerrar sesión</Text>
       </Pressable>
     </View>
   );
@@ -42,6 +46,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: colors.text,
+  },
+  itemTextSalir: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.error,
   },
   chevron: {
     fontSize: 20,

@@ -27,7 +27,7 @@ export default function PremiumScreen() {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (cancelado) return;
 
@@ -59,7 +59,7 @@ export default function PremiumScreen() {
       .update({ es_premium: true, premium_hasta: premiumHasta })
       .eq('id', userId)
       .select()
-      .single();
+      .maybeSingle();
 
     setActivando(false);
 

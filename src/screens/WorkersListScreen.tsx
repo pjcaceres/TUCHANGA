@@ -19,6 +19,7 @@ import {
 } from '../constants/departamentos';
 import { RUBROS, type RubroId } from '../constants/rubros';
 import { colors } from '../constants/theme';
+import { useAuth } from '../contexts/AuthContext';
 import { distanciaKm } from '../lib/geo';
 import { esPremiumVigente } from '../lib/premium';
 import { supabase } from '../lib/supabase';
@@ -33,15 +34,36 @@ interface Coords {
 }
 
 export default function WorkersListScreen({ navigation }: Props) {
+  const { session } = useAuth();
   const [departamento, setDepartamento] = useState<Departamento>(DEPARTAMENTO_POR_DEFECTO);
   const [rubroFiltro, setRubroFiltro] = useState<RubroId | null>(null);
   const [userCoords, setUserCoords] = useState<Coords | null>(null);
   const [detectando, setDetectando] = useState(false);
   const [ubicacionError, setUbicacionError] = useState<string | null>(null);
+  const [esTrabajador, setEsTrabajador] = useState(false);
 
   const [trabajadores, setTrabajadores] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelado = false;
+    const userId = session?.user.id;
+    if (!userId) return;
+
+    supabase
+      .from('profiles')
+      .select('tipo_usuario')
+      .eq('id', userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelado) setEsTrabajador(data?.tipo_usuario === 'trabajador');
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [session?.user.id]);
 
   const detectarUbicacion = useCallback(async (aplicarDepartamento: boolean) => {
     setDetectando(true);
@@ -139,17 +161,16 @@ export default function WorkersListScreen({ navigation }: Props) {
       <View style={styles.header}>
         <Text style={styles.title}>TuChanga</Text>
         <View style={styles.headerActions}>
-          <Pressable onPress={() => navigation.navigate('Premium')}>
-            <Text style={styles.premiumLink}>⭐ Premium</Text>
-          </Pressable>
+          {esTrabajador && (
+            <Pressable onPress={() => navigation.navigate('Premium')}>
+              <Text style={styles.premiumLink}>⭐ Premium</Text>
+            </Pressable>
+          )}
           <Pressable onPress={() => navigation.navigate('MisChats')}>
             <Text style={styles.logout}>💬 Mis chats</Text>
           </Pressable>
           <Pressable onPress={() => navigation.navigate('Configuracion')}>
             <Text style={styles.logout}>⚙️ Configuración</Text>
-          </Pressable>
-          <Pressable onPress={() => supabase.auth.signOut()}>
-            <Text style={styles.logout}>Salir</Text>
           </Pressable>
         </View>
       </View>
