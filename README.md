@@ -123,12 +123,20 @@ los perfiles gratuitos, y ambos grupos se siguen ordenando por cercanía— y mu
 insignia automáticamente, sin necesidad de ningún job en el servidor: la vigencia se calcula al
 vuelo comparando `premium_hasta` con la fecha actual (`src/lib/premium.ts`).
 
-Desde el listado, cualquier trabajador puede tocar "⭐ Premium" en el header para ir a la pantalla
-de activación, que explica los beneficios y tiene un botón "Hacerme Premium por 30 días" (o
-"Renovar 30 días más" si ya está activo). **Todavía no hay cobro real**: el botón simplemente
-actualiza `es_premium`/`premium_hasta` en su propio perfil (permitido por la política RLS de
-"editar mi perfil" ya existente). Cuando se integre un medio de pago (Mercado Pago u otro), ese
-botón pasa a iniciar el cobro y sólo al confirmarse se actualizan esos mismos campos.
+Desde el listado, un trabajador puede tocar "⭐ Premium" en el header para ir a la pantalla de
+activación, que explica los beneficios y tiene un botón "Hacerme Premium por 30 días" (o "Renovar
+30 días más" si ya está activo). **Todavía no hay cobro real**: el botón simplemente actualiza
+`es_premium`/`premium_hasta` en su propio perfil (permitido por la política RLS de "editar mi
+perfil" ya existente). Cuando se integre un medio de pago (Mercado Pago u otro), ese botón pasa a
+iniciar el cobro y sólo al confirmarse se actualizan esos mismos campos. El link "⭐ Premium" solo
+aparece si el usuario logueado es de tipo trabajador (no tiene sentido para un cliente); esa
+verificación se reintenta cada vez que se vuelve al listado (`useFocusEffect`), no solo una vez al
+entrar, para que un fallo puntual de red no la deje oculta indefinidamente.
+
+Mientras un trabajador no tenga el plan premium vigente, ve un banner descartable arriba del
+listado ("⭐ Hacete Premium…") con los mismos beneficios y un acceso directo a la pantalla. Al
+cerrarlo con la "✕" queda guardado en `AsyncStorage` (por usuario), así no vuelve a aparecer en
+sesiones futuras; si en cambio se activa el plan, el banner deja de mostrarse solo.
 
 ## Chat interno
 
@@ -144,7 +152,9 @@ izquierda), un input abajo y hace scroll automático al último mensaje. Se susc
 `postgres_changes` sobre `mensajes` filtrando por `conversacion_id`, así que los mensajes nuevos
 del otro usuario aparecen sin recargar la pantalla (Supabase Realtime). "💬 Mis chats" en el header
 del listado lleva a `MisChatsScreen.tsx`, con todas las conversaciones del usuario (como cliente o
-como trabajador) y el nombre del otro participante.
+como trabajador) y el nombre del otro participante. Cuando todavía no tiene ninguna, el mensaje
+vacío cambia según el tipo de usuario: a un cliente se lo invita a contactar a un trabajador, a un
+trabajador se le explica que ahí va a ver los mensajes de los clientes que lo contacten.
 
 RLS en `conversaciones`/`mensajes` restringe todo a los dos participantes de cada conversación, y
 un mensaje solo puede insertarse con `remitente_id = auth.uid()`.

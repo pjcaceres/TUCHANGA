@@ -1,4 +1,6 @@
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -24,7 +26,13 @@ import { distanciaKm } from '../lib/geo';
 import { esPremiumVigente } from '../lib/premium';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
-import type { Profile } from '../types/database';
+import type { Profile, TipoUsuario } from '../types/database';
+
+type MiPerfilPremium = {
+  tipo_usuario: TipoUsuario;
+  es_premium: boolean;
+  premium_hasta: string | null;
+};
 
 type Props = NativeStackScreenProps<AppStackParamList, 'WorkersList'>;
 
@@ -40,30 +48,57 @@ export default function WorkersListScreen({ navigation }: Props) {
   const [userCoords, setUserCoords] = useState<Coords | null>(null);
   const [detectando, setDetectando] = useState(false);
   const [ubicacionError, setUbicacionError] = useState<string | null>(null);
-  const [esTrabajador, setEsTrabajador] = useState(false);
+  const [miPerfil, setMiPerfil] = useState<MiPerfilPremium | null>(null);
+  const [bannerPremiumCerrado, setBannerPremiumCerrado] = useState(false);
 
   const [trabajadores, setTrabajadores] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const esTrabajador = miPerfil?.tipo_usuario === 'trabajador';
+
+  // useFocusEffect (en vez de un useEffect único) para reintentar la consulta
+  // cada vez que se vuelve a esta pantalla, por si la primera vez falló.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelado = false;
+      const userId = session?.user.id;
+      if (!userId) return;
+
+      supabase
+        .from('profiles')
+        .select('tipo_usuario, es_premium, premium_hasta')
+        .eq('id', userId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (!cancelado) setMiPerfil(data ?? null);
+        });
+
+      return () => {
+        cancelado = true;
+      };
+    }, [session?.user.id])
+  );
+
   useEffect(() => {
-    let cancelado = false;
     const userId = session?.user.id;
     if (!userId) return;
 
-    supabase
-      .from('profiles')
-      .select('tipo_usuario')
-      .eq('id', userId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelado) setEsTrabajador(data?.tipo_usuario === 'trabajador');
-      });
-
-    return () => {
-      cancelado = true;
-    };
+    AsyncStorage.getItem(`premium_banner_cerrado_${userId}`).then((valor) => {
+      setBannerPremiumCerrado(valor === '1');
+    });
   }, [session?.user.id]);
+
+  const cerrarBannerPremium = () => {
+    setBannerPremiumCerrado(true);
+    const userId = session?.user.id;
+    if (userId) {
+      AsyncStorage.setItem(`premium_banner_cerrado_${userId}`, '1');
+    }
+  };
+
+  const mostrarBannerPremium =
+    esTrabajador && !!miPerfil && !esPremiumVigente(miPerfil) && !bannerPremiumCerrado;
 
   const detectarUbicacion = useCallback(async (aplicarDepartamento: boolean) => {
     setDetectando(true);
@@ -175,6 +210,24 @@ export default function WorkersListScreen({ navigation }: Props) {
         </View>
       </View>
 
+      {mostrarBannerPremium && (
+        <View style={styles.bannerPremium}>
+          <View style={styles.bannerPremioTexto}>
+            <Text style={styles.bannerPremiumTitulo}>⭐ Hacete Premium</Text>
+            <Text style={styles.bannerPremiumDescripcion}>
+              Aparecé primero en los resultados de tu departamento y rubro, con la insignia
+              "Destacado" en tu tarjeta y tu perfil.
+            </Text>
+            <Pressable onPress={() => navigation.navigate('Premium')}>
+              <Text style={styles.bannerPremiumLink}>Ver Premium →</Text>
+            </Pressable>
+          </View>
+          <Pressable onPress={cerrarBannerPremium} hitSlop={8}>
+            <Text style={styles.bannerPremiumCerrar}>✕</Text>
+          </Pressable>
+        </View>
+      )}
+
       <View style={styles.filtersSection}>
         <DepartamentoSelector
           departamento={departamento}
@@ -282,6 +335,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.textMuted,
+  },
+  bannerPremium: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: '#FDECC8',
+    borderRadius: 14,
+    padding: 16,
+  },
+  bannerPremioTexto: {
+    flex: 1,
+    gap: 4,
+  },
+  bannerPremiumTitulo: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#8A5A00',
+  },
+  bannerPremiumDescripcion: {
+    fontSize: 13,
+    color: '#5C3D00',
+    lineHeight: 18,
+  },
+  bannerPremiumLink: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#8A5A00',
+    marginTop: 4,
+  },
+  bannerPremiumCerrar: {
+    fontSize: 16,
+    color: '#8A5A00',
+    paddingHorizontal: 4,
   },
   filtersSection: {
     paddingHorizontal: 20,

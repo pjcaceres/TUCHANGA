@@ -20,6 +20,7 @@ export default function MisChatsScreen({ navigation }: Props) {
   const userId = session?.user.id;
 
   const [chats, setChats] = useState<ChatItem[]>([]);
+  const [esTrabajador, setEsTrabajador] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,13 +37,19 @@ export default function MisChatsScreen({ navigation }: Props) {
         setLoading(true);
         setError(null);
 
-        const { data: conversaciones, error: conversacionesError } = await supabase
-          .from('conversaciones')
-          .select('*')
-          .or(`cliente_id.eq.${userId},trabajador_id.eq.${userId}`)
-          .order('created_at', { ascending: false });
+        const [{ data: miPerfil }, { data: conversaciones, error: conversacionesError }] =
+          await Promise.all([
+            supabase.from('profiles').select('tipo_usuario').eq('id', userId).maybeSingle(),
+            supabase
+              .from('conversaciones')
+              .select('*')
+              .or(`cliente_id.eq.${userId},trabajador_id.eq.${userId}`)
+              .order('created_at', { ascending: false }),
+          ]);
 
         if (cancelado) return;
+
+        setEsTrabajador(miPerfil?.tipo_usuario === 'trabajador');
 
         if (conversacionesError) {
           setError(conversacionesError.message);
@@ -107,7 +114,11 @@ export default function MisChatsScreen({ navigation }: Props) {
       data={chats}
       keyExtractor={(item) => item.conversacionId}
       ListEmptyComponent={
-        <Text style={styles.vacio}>Todavía no tenés conversaciones. Contactá a un trabajador para empezar.</Text>
+        <Text style={styles.vacio}>
+          {esTrabajador
+            ? 'Todavía no tenés conversaciones. Vas a ver acá los mensajes de los clientes que te contacten.'
+            : 'Todavía no tenés conversaciones. Contactá a un trabajador para empezar.'}
+        </Text>
       }
       renderItem={({ item }) => (
         <Pressable
