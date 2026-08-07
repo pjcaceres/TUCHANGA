@@ -1,14 +1,47 @@
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../constants/theme';
+import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Configuracion'>;
 
 export default function ConfiguracionScreen({ navigation }: Props) {
+  const { session } = useAuth();
+  const [esTrabajador, setEsTrabajador] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelado = false;
+      const userId = session?.user.id;
+      if (!userId) return;
+
+      supabase
+        .from('profiles')
+        .select('tipo_usuario')
+        .eq('id', userId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (!cancelado) setEsTrabajador(data?.tipo_usuario === 'trabajador');
+        });
+
+      return () => {
+        cancelado = true;
+      };
+    }, [session?.user.id])
+  );
+
   return (
     <View style={styles.container}>
+      {esTrabajador && (
+        <Pressable style={styles.item} onPress={() => navigation.navigate('EditarPerfil')}>
+          <Text style={styles.itemText}>Editar perfil</Text>
+          <Text style={styles.chevron}>›</Text>
+        </Pressable>
+      )}
       <Pressable style={styles.item} onPress={() => navigation.navigate('Terminos')}>
         <Text style={styles.itemText}>Términos y Condiciones</Text>
         <Text style={styles.chevron}>›</Text>

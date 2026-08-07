@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import ChatScreen from '../screens/ChatScreen';
 import ConfiguracionScreen from '../screens/ConfiguracionScreen';
 import DejarResenaScreen from '../screens/DejarResenaScreen';
+import EditarPerfilScreen from '../screens/EditarPerfilScreen';
 import LoginScreen from '../screens/LoginScreen';
 import MisChatsScreen from '../screens/MisChatsScreen';
 import PremiumScreen from '../screens/PremiumScreen';
@@ -77,6 +78,11 @@ function AppNavigator() {
         name="Chat"
         component={ChatScreen}
         options={({ route }) => ({ title: route.params.nombreOtroUsuario })}
+      />
+      <AppStack.Screen
+        name="EditarPerfil"
+        component={EditarPerfilScreen}
+        options={{ title: 'Editar perfil' }}
       />
     </AppStack.Navigator>
   );

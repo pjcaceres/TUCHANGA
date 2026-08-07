@@ -46,7 +46,8 @@ src/
     WorkerProfileScreen.tsx    Perfil completo: descripción, historial de trabajos, reseñas, botón "Contactar" y "Dejar reseña" (habilitado solo si ya lo contactó)
     PremiumScreen.tsx          Activar/renovar el plan premium (visibilidad + insignia) del propio perfil
     DejarResenaScreen.tsx      Formulario de reseña (estrellas + trabajo realizado + comentario) para clientes
-    ConfiguracionScreen.tsx    Acceso a Términos y Privacidad para usuarios logueados
+    ConfiguracionScreen.tsx    Acceso a Editar perfil (solo trabajador), Términos, Privacidad y Cerrar sesión
+    EditarPerfilScreen.tsx     Edita el perfil de un trabajador ya registrado (con la misma opción de IA del registro)
     TerminosScreen.tsx         Términos y Condiciones con buen formato
     PrivacidadScreen.tsx       Política de Privacidad con buen formato
     MisChatsScreen.tsx         Lista de conversaciones del usuario (cliente o trabajador)
@@ -113,6 +114,16 @@ También se puede hacer con el [CLI de Supabase](https://supabase.com/docs/guide
 
 La app la invoca vía `supabase.functions.invoke('generar-perfil', { body: { texto } })` usando el
 anon key normal — no hace falta ninguna variable de entorno adicional del lado del cliente.
+
+## Editar perfil (trabajador)
+
+Un trabajador ya registrado puede tocar "Editar perfil" en "⚙️ Configuración" (no aparece para
+usuarios tipo cliente) y llega a `EditarPerfilScreen.tsx` con su nombre, teléfono, departamento,
+rubro y descripción precargados desde su propia fila de `profiles`. Tiene la misma opción
+"Describir con IA" que el registro: escribe un texto libre, la Edge Function `generar-perfil`
+sugiere rubro/descripción (y departamento, si lo menciona), y el trabajador revisa/edita ese
+resultado antes de confirmar. "Guardar cambios" hace un `update` sobre su fila existente
+(`eq('id', userId)`) — nunca inserta un perfil nuevo.
 
 ## Plan premium (freemium)
 
@@ -209,6 +220,7 @@ hay build step que los sincronice automáticamente).
 - [x] Términos y Condiciones / Política de Privacidad integrados, con aceptación obligatoria al registrarse
 - [x] Generación de perfil por IA a partir de texto libre al registrarse (con revisión/edición antes de guardar)
 - [x] Plan premium: prioridad en el listado + insignia "Destacado" + pantalla de activación (sin cobro real todavía)
-- [ ] Perfil de trabajador editable desde la app luego del registro (foto)
+- [x] Perfil de trabajador editable desde la app luego del registro (con la opción de IA del registro)
+- [ ] Foto de perfil editable desde la app
 - [ ] Dictado por audio (hoy funciona vía el micrófono del teclado del sistema, no hay grabación propia)
 - [ ] Cobro real del plan premium (Mercado Pago u otro medio) — hoy se activa sin costo para probar la lógica

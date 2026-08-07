@@ -15,4 +15,5 @@ export type AppStackParamList = {
   Privacidad: undefined;
   MisChats: undefined;
   Chat: { conversacionId: string; nombreOtroUsuario: string };
+  EditarPerfil: undefined;
 };
