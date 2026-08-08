@@ -51,20 +51,14 @@ export default function WorkersListScreen({ navigation }: Props) {
 
   const esTrabajador = miPerfil?.tipo_usuario === 'trabajador';
 
-  // DEBUG TEMPORAL: para diagnosticar por qué "Premium" no aparece.
-  console.log('[DEBUG Premium] render — miPerfil:', miPerfil, '| esTrabajador:', esTrabajador);
-
   // useFocusEffect (en vez de un useEffect único) para reintentar la consulta
   // cada vez que se vuelve a esta pantalla, por si la primera vez falló.
   // Usa select('*') (en vez de columnas puntuales) para no depender de que
   // el cache de esquema de PostgREST tenga cada columna nueva al día.
   useFocusEffect(
     useCallback(() => {
-      const userId = session?.user.id;
-      // DEBUG TEMPORAL
-      console.log('[DEBUG Premium] useFocusEffect disparado — session?.user.id =', userId);
-
       let cancelado = false;
+      const userId = session?.user.id;
       if (!userId) return;
 
       supabase
@@ -73,9 +67,6 @@ export default function WorkersListScreen({ navigation }: Props) {
         .eq('id', userId)
         .maybeSingle()
         .then(({ data, error: fetchError }) => {
-          // DEBUG TEMPORAL: mostrar exactamente lo que devuelve la consulta.
-          console.log('[DEBUG Premium] resultado de la consulta — data:', data, '| error:', fetchError);
-
           if (cancelado) return;
           if (fetchError) {
             console.error('No pudimos verificar el tipo de usuario para Premium:', fetchError.message);

@@ -142,40 +142,43 @@ export default function RegisterScreen({ navigation }: Props) {
 
     setLoading(true);
 
+    // Los datos del perfil van en options.data (auth.users.raw_user_meta_data):
+    // se guardan ahí de forma síncrona apenas se crea el usuario, tenga sesión
+    // o no. Un trigger en la base (0007_perfil_automatico.sql) los lee de ahí
+    // para crear la fila en profiles. No insertamos profiles directo desde el
+    // cliente: si la confirmación de email por link está habilitada, signUp()
+    // no devuelve sesión activa todavía, y ese insert corría sin autenticación
+    // real y quedaba bloqueado por RLS en silencio, dejando la cuenta de auth
+    // creada pero sin perfil.
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
       password,
+      options: {
+        data: {
+          tipo_usuario: tipoUsuario,
+          nombre: nombre.trim(),
+          telefono: telefono.trim() || null,
+          rubro: tipoUsuario === 'trabajador' ? rubro : null,
+          descripcion: tipoUsuario === 'trabajador' ? descripcion.trim() || null : null,
+          departamento: tipoUsuario === 'trabajador' ? departamento : null,
+        },
+      },
     });
 
+    setLoading(false);
+
     if (signUpError) {
-      setLoading(false);
+      console.error('Error al crear la cuenta:', signUpError.message);
       setError(traducirError(signUpError.message));
       return;
     }
 
-    const userId = data.user?.id;
-
-    if (userId && data.session) {
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: userId,
-        tipo_usuario: tipoUsuario,
-        nombre: nombre.trim(),
-        telefono: telefono.trim() || null,
-        rubro: tipoUsuario === 'trabajador' ? rubro : null,
-        descripcion: tipoUsuario === 'trabajador' ? descripcion.trim() || null : null,
-        departamento: tipoUsuario === 'trabajador' ? departamento : null,
-      });
-
-      setLoading(false);
-
-      if (profileError) {
-        setError(`Cuenta creada, pero no pudimos guardar tu perfil: ${profileError.message}`);
-        return;
-      }
+    if (data.user && data.session) {
+      // Ya queda logueado (confirmación de email deshabilitada): el
+      // RootNavigator pasa solo al AppStack en cuanto detecta la sesión.
       return;
     }
 
-    setLoading(false);
     setConfirmarEmail(true);
   };
 
@@ -184,8 +187,8 @@ export default function RegisterScreen({ navigation }: Props) {
       <View style={styles.confirmContainer}>
         <Text style={styles.title}>Confirmá tu email</Text>
         <Text style={styles.subtitle}>
-          Te enviamos un link de confirmación a {email}. Una vez confirmado, iniciá sesión para
-          terminar de armar tu perfil.
+          Te enviamos un link de confirmación a {email}. Una vez confirmado, iniciá sesión con tu
+          cuenta.
         </Text>
         <Pressable style={styles.button} onPress={() => navigation.navigate('Login')}>
           <Text style={styles.buttonText}>Ir a iniciar sesión</Text>

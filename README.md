@@ -62,6 +62,7 @@ supabase/
     0004_resenas_clientes.sql   Vincula reseñas a un cliente real + política de inserción
     0005_chat.sql               Tablas `conversaciones` y `mensajes` con RLS + Realtime
     0006_quitar_precio.sql      Elimina la columna `precio_orientativo` de `profiles`
+    0007_perfil_automatico.sql  Trigger en auth.users que crea la fila de profiles automáticamente
   seed.sql                    Trabajadores ficticios de prueba repartidos en varios departamentos
   functions/
     generar-perfil/           Edge Function: arma rubro/descripción/departamento con Claude (Anthropic)
@@ -79,6 +80,7 @@ supabase/
    - `supabase/migrations/0004_resenas_clientes.sql`
    - `supabase/migrations/0005_chat.sql`
    - `supabase/migrations/0006_quitar_precio.sql`
+   - `supabase/migrations/0007_perfil_automatico.sql`
    - `supabase/seed.sql` (opcional, carga trabajadores de prueba para ver el listado funcionando)
 3. Desplegá la Edge Function `generar-perfil` y configurá su secreto (ver sección siguiente).
 4. Instalá dependencias y arrancá la app:
@@ -89,6 +91,29 @@ supabase/
    ```
 
    Luego abrí la app en Expo Go (Android/iOS) o `npm run web` para probar en el navegador.
+
+## Registro y creación del perfil
+
+`supabase.auth.signUp()` **no siempre devuelve una sesión activa** — si tu proyecto tiene
+habilitada la confirmación de email por link (Authentication → Settings → "Confirm email"), la
+sesión queda en `null` hasta que el usuario confirma. Por eso la fila de `profiles` **no** se crea
+con un `insert` desde el cliente justo después del `signUp()`: si no hay sesión todavía, ese insert
+corre sin autenticación real y la política RLS lo bloquea sin devolver ningún error visible en la
+UI — la cuenta de `auth.users` queda creada, pero sin perfil, para siempre.
+
+En cambio, los datos del formulario (`tipo_usuario`, `nombre`, `teléfono`, `rubro`, `descripción`,
+`departamento`) se mandan como `options.data` de `signUp()`, que Supabase guarda de forma síncrona
+en `auth.users.raw_user_meta_data` apenas se crea el usuario — con sesión o sin ella. Un trigger en
+la base (`0007_perfil_automatico.sql`, función `handle_new_user()`) escucha los inserts en
+`auth.users` y crea la fila de `profiles` a partir de esos metadatos, corriendo como
+`security definer` (no lo bloquea RLS). Si esa creación falla por cualquier motivo, `signUp()`
+devuelve el error directo al cliente (se muestra en el formulario y se loguea en consola) — ya no
+puede quedar una cuenta de auth "huérfana" sin perfil.
+
+**Si ya tenés cuentas creadas antes de aplicar esta migración**, van a seguir sin perfil (los datos
+originales del formulario nunca se guardaron en ningún lado, así que no hay forma de recuperarlos
+automáticamente). Lo más simple es borrarlas desde el [Dashboard de Supabase](https://supabase.com/dashboard)
+(Authentication → Users) y volver a registrarlas.
 
 ## Perfil de trabajador generado por IA
 
