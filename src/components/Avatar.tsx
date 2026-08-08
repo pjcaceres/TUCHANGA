@@ -42,7 +42,7 @@ export default function Avatar({ fotoUrl, nombre, size, esPremium = false }: Pro
             },
           ]}
         >
-          <Text style={[styles.badgeIcono, { fontSize: badgeSize * 0.6 }]}>✓</Text>
+          <Text style={[styles.badgeIcono, { fontSize: badgeSize * 0.62 }]}>⭐</Text>
         </View>
       )}
     </View>

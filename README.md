@@ -184,8 +184,9 @@ terminar de subirla la primera vez que inicie sesión, en vez de intentarlo sile
 una sesión que todavía no existe (mismo tipo de bug que ya rompió la creación del perfil una vez).
 
 **Insignia de premium**: un trabajador con el plan premium vigente (`esPremiumVigente`) muestra un
-pequeño círculo con un check (✓) superpuesto en la esquina inferior derecha de su foto —además de
-la insignia "Destacado" que ya se mostraba junto al nombre— tanto en el listado como en su perfil.
+pequeño círculo con una estrella (⭐, el mismo símbolo que "⭐ Premium" y "Destacado") superpuesto en
+la esquina inferior derecha de su foto —además de la insignia "Destacado" que ya se mostraba junto
+al nombre— tanto en el listado como en su perfil.
 
 ## Plan premium (freemium)
 
