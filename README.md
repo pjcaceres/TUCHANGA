@@ -23,6 +23,7 @@ src/
     Avatar.tsx                Foto de perfil, o la inicial del nombre si no tiene una
     AvatarPicker.tsx          Avatar + control para elegir/subir una foto nueva
     RubroChipsSelector.tsx    Chips de selección múltiple de rubros
+    RubroChipsList.tsx        Chips de solo lectura para mostrar los rubros de un trabajador
   constants/
     rubros.ts                Lista de rubros/oficios del MVP
     departamentos.ts          19 departamentos de Uruguay + detección por cercanía
@@ -136,8 +137,9 @@ perder datos.
 `RubroChipsSelector.tsx` (en el registro y en "Editar perfil" del trabajador, tanto en modo manual
 como en la caja de revisión de la IA) deja tocar varios chips a la vez — cada toque agrega o saca
 ese rubro de la lista, no reemplaza la selección anterior. En el listado, la tarjeta y el perfil
-muestran todos los rubros del trabajador separados por coma (`rubrosLabel()` en
-`src/constants/rubros.ts`).
+muestran cada rubro del trabajador como un chip individual (`RubroChipsList.tsx`), en vez de un
+texto separado por comas — así no se confunde con rubros que ya tienen "/" en su nombre (como
+"Plomero / Sanitario").
 
 El filtro por rubro del listado sigue siendo de un chip a la vez, pero ahora busca "¿este trabajador
 tiene ese rubro entre los suyos?" en vez de "¿es exactamente ese?" — usa el operador `contains` de

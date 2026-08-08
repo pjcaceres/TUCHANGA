@@ -1,9 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { rubrosLabel } from '../constants/rubros';
 import { colors } from '../constants/theme';
 import { esPremiumVigente } from '../lib/premium';
 import type { Profile } from '../types/database';
 import Avatar from './Avatar';
+import RubroChipsList from './RubroChipsList';
 import StarRating from './StarRating';
 
 interface Props {
@@ -31,7 +31,9 @@ export default function WorkerCard({ trabajador, distanciaKm, onPress }: Props) 
             </View>
           )}
         </View>
-        <Text style={styles.rubro}>{rubrosLabel(trabajador.rubros)}</Text>
+        <View style={styles.rubroWrap}>
+          <RubroChipsList rubros={trabajador.rubros} />
+        </View>
         <StarRating
           calificacion={trabajador.calificacion_promedio}
           cantidad={trabajador.cantidad_resenas}
@@ -94,9 +96,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#8A5A00',
   },
-  rubro: {
-    fontSize: 13,
-    color: colors.textMuted,
+  rubroWrap: {
     marginBottom: 2,
   },
   distanciaContainer: {

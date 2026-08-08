@@ -15,8 +15,3 @@ export type RubroId = (typeof RUBROS)[number]['id'];
 export function rubroLabel(id: RubroId | null): string {
   return RUBROS.find((r) => r.id === id)?.label ?? 'Oficio no especificado';
 }
-
-export function rubrosLabel(ids: RubroId[]): string {
-  if (ids.length === 0) return 'Oficio no especificado';
-  return ids.map((id) => rubroLabel(id)).join(', ');
-}

@@ -3,8 +3,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../components/Avatar';
+import RubroChipsList from '../components/RubroChipsList';
 import StarRating from '../components/StarRating';
-import { rubrosLabel } from '../constants/rubros';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { haContactadoAlTrabajador, obtenerOCrearConversacion } from '../lib/chat';
@@ -137,7 +137,9 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
             </View>
           )}
         </View>
-        <Text style={styles.rubro}>{rubrosLabel(trabajador.rubros)}</Text>
+        <View style={styles.rubroWrap}>
+          <RubroChipsList rubros={trabajador.rubros} />
+        </View>
         <StarRating
           calificacion={trabajador.calificacion_promedio}
           cantidad={trabajador.cantidad_resenas}
@@ -276,9 +278,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#8A5A00',
   },
-  rubro: {
-    fontSize: 14,
-    color: colors.textMuted,
+  rubroWrap: {
+    marginTop: 2,
   },
   ubicacion: {
     fontSize: 13,
