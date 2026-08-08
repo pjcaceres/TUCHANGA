@@ -22,6 +22,7 @@ src/
     MarkdownContent.tsx       Renderiza los documentos legales (títulos, negrita, listas)
     Avatar.tsx                Foto de perfil, o la inicial del nombre si no tiene una
     AvatarPicker.tsx          Avatar + control para elegir/subir una foto nueva
+    RubroChipsSelector.tsx    Chips de selección múltiple de rubros
   constants/
     rubros.ts                Lista de rubros/oficios del MVP
     departamentos.ts          19 departamentos de Uruguay + detección por cercanía
@@ -44,7 +45,7 @@ src/
     types.ts                  Param lists de cada stack
   screens/
     LoginScreen.tsx
-    RegisterScreen.tsx        Registro con selección de rol (trabajador/cliente), rubro/departamento por selector, validaciones y aceptación de términos
+    RegisterScreen.tsx        Registro con selección de rol (trabajador/cliente), rubros (selección múltiple)/departamento por selector, validaciones y aceptación de términos
     WorkersListScreen.tsx      Listado de trabajadores: filtro por departamento + rubro, premium primero, ordenado por cercanía
     WorkerProfileScreen.tsx    Perfil completo: descripción, historial de trabajos, reseñas, botón "Contactar" y "Dejar reseña" (habilitado solo si ya lo contactó)
     PremiumScreen.tsx          Activar/renovar el plan premium (visibilidad + insignia) del propio perfil
@@ -68,9 +69,10 @@ supabase/
     0006_quitar_precio.sql      Elimina la columna `precio_orientativo` de `profiles`
     0007_perfil_automatico.sql  Trigger en auth.users que crea la fila de profiles automáticamente
     0008_avatars_storage.sql    Bucket público "avatars" + políticas de Storage por usuario
+    0009_rubros_multiples.sql   Reemplaza `rubro` (uno) por `rubros` (array) + migra los datos existentes
   seed.sql                    Trabajadores ficticios de prueba repartidos en varios departamentos
   functions/
-    generar-perfil/           Edge Function: arma rubro/descripción/departamento con Claude (Anthropic)
+    generar-perfil/           Edge Function: arma rubros/descripción/departamento con Claude (Anthropic)
 ```
 
 ## Setup
@@ -87,6 +89,7 @@ supabase/
    - `supabase/migrations/0006_quitar_precio.sql`
    - `supabase/migrations/0007_perfil_automatico.sql`
    - `supabase/migrations/0008_avatars_storage.sql`
+   - `supabase/migrations/0009_rubros_multiples.sql`
    - `supabase/seed.sql` (opcional, carga trabajadores de prueba para ver el listado funcionando)
 3. Desplegá la Edge Function `generar-perfil` y configurá su secreto (ver sección siguiente).
 4. Instalá dependencias y arrancá la app:
@@ -121,12 +124,35 @@ originales del formulario nunca se guardaron en ningún lado, así que no hay fo
 automáticamente). Lo más simple es borrarlas desde el [Dashboard de Supabase](https://supabase.com/dashboard)
 (Authentication → Users) y volver a registrarlas.
 
+## Rubros múltiples
+
+Un trabajador puede tener más de un rubro a la vez (por ejemplo, plomero y pintor). `profiles`
+tiene una columna `rubros text[]` (no una tabla de relación aparte — para esta lista corta y fija
+de oficios, un array alcanza y es más simple de consultar) con un índice GIN para que el filtro sea
+rápido. La migración `0009_rubros_multiples.sql` reemplaza a la vieja columna `rubro` (un solo
+valor): cada trabajador que ya tenía uno lo conserva como el primer elemento de su nueva lista, sin
+perder datos.
+
+`RubroChipsSelector.tsx` (en el registro y en "Editar perfil" del trabajador, tanto en modo manual
+como en la caja de revisión de la IA) deja tocar varios chips a la vez — cada toque agrega o saca
+ese rubro de la lista, no reemplaza la selección anterior. En el listado, la tarjeta y el perfil
+muestran todos los rubros del trabajador separados por coma (`rubrosLabel()` en
+`src/constants/rubros.ts`).
+
+El filtro por rubro del listado sigue siendo de un chip a la vez, pero ahora busca "¿este trabajador
+tiene ese rubro entre los suyos?" en vez de "¿es exactamente ese?" — usa el operador `contains` de
+PostgREST (`rubros=cs.{valor}`, equivalente a `@>` en Postgres), así que un trabajador con varios
+rubros aparece en el filtro de cualquiera de ellos.
+
 ## Perfil de trabajador generado por IA
 
 En el registro de trabajador hay una opción "Describir con IA": el trabajador escribe (o dicta)
 un texto libre contando lo que hace, y la Edge Function `generar-perfil` le pide a Claude (Anthropic)
-que devuelva rubro / descripción / departamento en JSON estructurado. El trabajador siempre revisa
-y puede editar ese resultado antes de confirmar — nunca se guarda directo.
+que devuelva rubros / descripción / departamento en JSON estructurado. El campo `rubros` es un
+array (mínimo un elemento): si el texto menciona más de un oficio —por ejemplo "hago pintura y
+trabajos de plomería"— el prompt le pide a la IA que los detecte todos, no solo el primero. El
+trabajador siempre revisa y puede editar ese resultado (incluyendo tocar o destocar chips de rubro)
+antes de confirmar — nunca se guarda directo.
 
 Para habilitarlo desde el [Dashboard de Supabase](https://supabase.com/dashboard) (sin CLI):
 
@@ -149,10 +175,10 @@ anon key normal — no hace falta ninguna variable de entorno adicional del lado
 ## Editar perfil
 
 "Editar perfil" en "⚙️ Configuración" lleva a una pantalla distinta según el tipo de cuenta:
-- **Trabajador** → `EditarPerfilScreen.tsx`, con nombre, teléfono, foto, departamento, rubro y
+- **Trabajador** → `EditarPerfilScreen.tsx`, con nombre, teléfono, foto, departamento, rubros y
   descripción precargados desde su propia fila de `profiles`. Tiene la misma opción "Describir con
   IA" que el registro: escribe un texto libre, la Edge Function `generar-perfil` sugiere
-  rubro/descripción (y departamento, si lo menciona), y el trabajador revisa/edita ese resultado
+  rubros/descripción (y departamento, si lo menciona), y el trabajador revisa/edita ese resultado
   antes de confirmar.
 - **Cliente** → `EditarPerfilClienteScreen.tsx`, mucho más simple: solo nombre y foto.
 
@@ -276,8 +302,8 @@ hay build step que los sincronice automáticamente).
 
 - [x] Estructura base del proyecto (Expo + TypeScript + Supabase)
 - [x] Registro y login con Supabase Auth (email/contraseña)
-- [x] Selección de rol al registrarse (trabajador / cliente), con rubro y departamento por
-      selector (no texto libre) y validación de teléfono
+- [x] Selección de rol al registrarse (trabajador / cliente), con rubros (uno o varios) y
+      departamento por selector (no texto libre) y validación de teléfono
 - [x] Listado de trabajadores por departamento (detección por GPS + selección manual) y rubro,
       ordenado por cercanía real (lat/lng)
 - [x] Perfil completo del trabajador con descripción, historial de trabajos y reseñas
@@ -289,5 +315,6 @@ hay build step que los sincronice automáticamente).
 - [x] Plan premium: prioridad en el listado + insignia "Destacado" + pantalla de activación (sin cobro real todavía)
 - [x] Perfil de trabajador y de cliente editables desde la app luego del registro (con la opción de IA para trabajador)
 - [x] Foto de perfil (trabajador y cliente)
+- [x] Un trabajador puede tener más de un rubro, con filtro y detección por IA acordes
 - [ ] Dictado por audio (hoy funciona vía el micrófono del teclado del sistema, no hay grabación propia)
 - [ ] Cobro real del plan premium (Mercado Pago u otro medio) — hoy se activa sin costo para probar la lógica

@@ -145,7 +145,7 @@ export default function WorkersListScreen({ navigation }: Props) {
         .eq('departamento', departamento);
 
       if (rubroFiltro) {
-        query = query.eq('rubro', rubroFiltro);
+        query = query.contains('rubros', [rubroFiltro]);
       }
 
       const { data, error: fetchError } = await query;

@@ -55,13 +55,18 @@ const corsHeaders = {
 const PERFIL_SCHEMA = {
   type: 'object',
   properties: {
-    rubro: { type: 'string', enum: [...RUBROS_VALIDOS] },
+    rubros: {
+      type: 'array',
+      items: { type: 'string', enum: [...RUBROS_VALIDOS] },
+      minItems: 1,
+      uniqueItems: true,
+    },
     descripcion: { type: 'string' },
     departamento: {
       anyOf: [{ type: 'string', enum: [...DEPARTAMENTOS_VALIDOS] }, { type: 'null' }],
     },
   },
-  required: ['rubro', 'descripcion', 'departamento'],
+  required: ['rubros', 'descripcion', 'departamento'],
   additionalProperties: false,
 };
 
@@ -81,7 +86,7 @@ ${texto}
 """
 
 Completá estos campos a partir del texto, sin inventar datos que no estén en él:
-- rubro: el oficio principal. Tiene que ser exactamente uno de: ${RUBROS_VALIDOS.join(', ')}. Si el texto no coincide claramente con ninguno, usá "otro".
+- rubros: uno o más oficios que menciona el texto (por ejemplo, si dice "hago pintura y trabajos de plomería" tiene que incluir tanto pintura como plomero). Cada uno tiene que ser exactamente uno de: ${RUBROS_VALIDOS.join(', ')}. Si menciona un solo oficio, devolvé un array con ese único valor. Si el texto no coincide claramente con ninguno, usá ["otro"].
 - descripcion: un párrafo breve (2 a 4 oraciones), en español, en primera persona, profesional y claro, resumiendo qué hace, su experiencia y su zona de trabajo si la menciona.
 - departamento: si el texto permite identificar con confianza en qué departamento de Uruguay trabaja, elegí exactamente uno de: ${DEPARTAMENTOS_VALIDOS.join(', ')}. Si no se puede inferir con confianza, usá null.`;
 }
@@ -151,13 +156,13 @@ Deno.serve(async (req) => {
     }
 
     const perfil = JSON.parse(textBlock.text) as {
-      rubro: string;
+      rubros: string[];
       descripcion: string;
       departamento: string | null;
     };
 
     return jsonResponse({
-      rubro: perfil.rubro,
+      rubros: perfil.rubros,
       descripcion: perfil.descripcion.slice(0, 600),
       departamento: perfil.departamento,
     });

@@ -9,7 +9,7 @@ export type Profile = {
   nombre: string;
   telefono: string | null;
   barrio: string | null;
-  rubro: RubroId | null;
+  rubros: RubroId[];
   descripcion: string | null;
   foto_url: string | null;
   es_premium: boolean;

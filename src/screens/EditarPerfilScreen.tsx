@@ -15,12 +15,13 @@ import {
 } from 'react-native';
 import AvatarPicker from '../components/AvatarPicker';
 import DepartamentoSelector from '../components/DepartamentoSelector';
+import RubroChipsSelector from '../components/RubroChipsSelector';
 import {
   DEPARTAMENTO_POR_DEFECTO,
   departamentoMasCercano,
   type Departamento,
 } from '../constants/departamentos';
-import { RUBROS, type RubroId } from '../constants/rubros';
+import type { RubroId } from '../constants/rubros';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { subirFotoDePerfil, type FotoElegida } from '../lib/avatar';
@@ -44,7 +45,7 @@ export default function EditarPerfilScreen({ navigation }: Props) {
 
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
-  const [rubro, setRubro] = useState<RubroId | null>(null);
+  const [rubros, setRubros] = useState<RubroId[]>([]);
   const [descripcion, setDescripcion] = useState('');
   const [departamento, setDepartamento] = useState<Departamento | null>(null);
   const [fotoUrl, setFotoUrl] = useState<string | null>(null);
@@ -60,6 +61,12 @@ export default function EditarPerfilScreen({ navigation }: Props) {
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const toggleRubro = (id: RubroId) => {
+    setRubros((actuales) =>
+      actuales.includes(id) ? actuales.filter((r) => r !== id) : [...actuales, id]
+    );
+  };
 
   const detectarUbicacion = async () => {
     setDetectandoUbicacion(true);
@@ -101,7 +108,7 @@ export default function EditarPerfilScreen({ navigation }: Props) {
       } else {
         setNombre(data.nombre);
         setTelefono(data.telefono ?? '');
-        setRubro(data.rubro);
+        setRubros(data.rubros);
         setDescripcion(data.descripcion ?? '');
         setDepartamento(data.departamento);
         setFotoUrl(data.foto_url);
@@ -146,7 +153,7 @@ export default function EditarPerfilScreen({ navigation }: Props) {
     setGenerandoIA(true);
 
     const { data, error: fnError } = await supabase.functions.invoke<{
-      rubro: RubroId;
+      rubros: RubroId[];
       descripcion: string;
       departamento: Departamento | null;
     }>('generar-perfil', {
@@ -161,7 +168,7 @@ export default function EditarPerfilScreen({ navigation }: Props) {
     }
 
     if (data) {
-      setRubro(data.rubro);
+      setRubros(data.rubros);
       setDescripcion(data.descripcion);
       if (data.departamento) {
         setDepartamento(data.departamento);
@@ -183,8 +190,8 @@ export default function EditarPerfilScreen({ navigation }: Props) {
       setError('El teléfono no parece válido. Usá un formato como 099 123 456 o 2487 1234.');
       return;
     }
-    if (!rubro) {
-      setError('Elegí tu rubro principal.');
+    if (rubros.length === 0) {
+      setError('Elegí al menos un rubro.');
       return;
     }
     if (!departamento) {
@@ -199,7 +206,7 @@ export default function EditarPerfilScreen({ navigation }: Props) {
       .update({
         nombre: nombre.trim(),
         telefono: telefono.trim() || null,
-        rubro,
+        rubros,
         descripcion: descripcion.trim() || null,
         departamento,
         foto_url: fotoUrl,
@@ -302,20 +309,8 @@ export default function EditarPerfilScreen({ navigation }: Props) {
 
           {modoPerfil === 'manual' ? (
             <>
-              <Text style={styles.label}>Rubro principal</Text>
-              <View style={styles.rubroWrap}>
-                {RUBROS.map((r) => (
-                  <Pressable
-                    key={r.id}
-                    style={[styles.chip, rubro === r.id && styles.chipActive]}
-                    onPress={() => setRubro(r.id)}
-                  >
-                    <Text style={[styles.chipText, rubro === r.id && styles.chipTextActive]}>
-                      {r.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
+              <Text style={styles.label}>Rubros (podés elegir más de uno)</Text>
+              <RubroChipsSelector seleccionados={rubros} onToggle={toggleRubro} />
 
               <Text style={styles.label}>Descripción (opcional)</Text>
               <TextInput
@@ -368,20 +363,8 @@ export default function EditarPerfilScreen({ navigation }: Props) {
                 <View style={styles.revisionBox}>
                   <Text style={styles.revisionTitle}>Revisá y editá antes de guardar</Text>
 
-                  <Text style={styles.label}>Rubro</Text>
-                  <View style={styles.rubroWrap}>
-                    {RUBROS.map((r) => (
-                      <Pressable
-                        key={r.id}
-                        style={[styles.chip, rubro === r.id && styles.chipActive]}
-                        onPress={() => setRubro(r.id)}
-                      >
-                        <Text style={[styles.chipText, rubro === r.id && styles.chipTextActive]}>
-                          {r.label}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
+                  <Text style={styles.label}>Rubros (podés elegir más de uno)</Text>
+                  <RubroChipsSelector seleccionados={rubros} onToggle={toggleRubro} />
 
                   <Text style={styles.label}>Descripción</Text>
                   <TextInput
@@ -522,31 +505,6 @@ const styles = StyleSheet.create({
   },
   toggleTextActive: {
     color: '#fff',
-  },
-  rubroWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    fontSize: 13,
-    color: colors.text,
-  },
-  chipTextActive: {
-    color: '#fff',
-    fontWeight: '600',
   },
   aiButton: {
     backgroundColor: colors.primaryDark,

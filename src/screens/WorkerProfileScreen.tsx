@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../components/Avatar';
 import StarRating from '../components/StarRating';
-import { rubroLabel } from '../constants/rubros';
+import { rubrosLabel } from '../constants/rubros';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { haContactadoAlTrabajador, obtenerOCrearConversacion } from '../lib/chat';
@@ -137,7 +137,7 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
             </View>
           )}
         </View>
-        <Text style={styles.rubro}>{rubroLabel(trabajador.rubro)}</Text>
+        <Text style={styles.rubro}>{rubrosLabel(trabajador.rubros)}</Text>
         <StarRating
           calificacion={trabajador.calificacion_promedio}
           cantidad={trabajador.cantidad_resenas}

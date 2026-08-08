@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { rubroLabel } from '../constants/rubros';
+import { rubrosLabel } from '../constants/rubros';
 import { colors } from '../constants/theme';
 import { esPremiumVigente } from '../lib/premium';
 import type { Profile } from '../types/database';
@@ -31,7 +31,7 @@ export default function WorkerCard({ trabajador, distanciaKm, onPress }: Props) 
             </View>
           )}
         </View>
-        <Text style={styles.rubro}>{rubroLabel(trabajador.rubro)}</Text>
+        <Text style={styles.rubro}>{rubrosLabel(trabajador.rubros)}</Text>
         <StarRating
           calificacion={trabajador.calificacion_promedio}
           cantidad={trabajador.cantidad_resenas}
