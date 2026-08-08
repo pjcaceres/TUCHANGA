@@ -3,6 +3,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../components/Avatar';
+import PublicacionCard from '../components/PublicacionCard';
 import RubroChipsList from '../components/RubroChipsList';
 import StarRating from '../components/StarRating';
 import { colors } from '../constants/theme';
@@ -11,7 +12,7 @@ import { haContactadoAlTrabajador, obtenerOCrearConversacion } from '../lib/chat
 import { esPremiumVigente } from '../lib/premium';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
-import type { Profile, Resena } from '../types/database';
+import type { Profile, Publicacion, Resena } from '../types/database';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'WorkerProfile'>;
 
@@ -21,6 +22,7 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
 
   const [trabajador, setTrabajador] = useState<Profile | null>(null);
   const [resenas, setResenas] = useState<Resena[]>([]);
+  const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
   const [esCliente, setEsCliente] = useState(false);
   const [haContactado, setHaContactado] = useState(false);
   const [contactando, setContactando] = useState(false);
@@ -36,10 +38,15 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
         setLoading(true);
         setError(null);
 
-        const [perfilResult, resenasResult, miPerfilResult] = await Promise.all([
+        const [perfilResult, resenasResult, publicacionesResult, miPerfilResult] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', workerId).single(),
           supabase
             .from('resenas')
+            .select('*')
+            .eq('trabajador_id', workerId)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('publicaciones')
             .select('*')
             .eq('trabajador_id', workerId)
             .order('created_at', { ascending: false }),
@@ -58,6 +65,10 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
 
         if (!resenasResult.error) {
           setResenas(resenasResult.data ?? []);
+        }
+
+        if (!publicacionesResult.error) {
+          setPublicaciones(publicacionesResult.data ?? []);
         }
 
         const clienteConfirmado = miPerfilResult.data?.tipo_usuario === 'cliente';
@@ -185,6 +196,17 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Sobre mí</Text>
           <Text style={styles.descripcion}>{trabajador.descripcion}</Text>
+        </View>
+      )}
+
+      {publicaciones.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Trabajos publicados ({publicaciones.length})</Text>
+          <View style={styles.publicacionesList}>
+            {publicaciones.map((publicacion) => (
+              <PublicacionCard key={publicacion.id} publicacion={publicacion} />
+            ))}
+          </View>
         </View>
       )}
 
@@ -330,6 +352,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.text,
+  },
+  publicacionesList: {
+    gap: 12,
   },
   descripcion: {
     fontSize: 14,

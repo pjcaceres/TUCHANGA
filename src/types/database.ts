@@ -49,6 +49,14 @@ export type Mensaje = {
   created_at: string;
 };
 
+export type Publicacion = {
+  id: string;
+  trabajador_id: string;
+  imagen_url: string;
+  descripcion: string | null;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -82,6 +90,12 @@ export type Database = {
           contenido: string;
         };
         Update: Partial<Mensaje>;
+        Relationships: [];
+      };
+      publicaciones: {
+        Row: Publicacion;
+        Insert: Partial<Publicacion> & { trabajador_id: string; imagen_url: string };
+        Update: Partial<Publicacion>;
         Relationships: [];
       };
     };

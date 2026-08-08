@@ -17,4 +17,6 @@ export type AppStackParamList = {
   Chat: { conversacionId: string; nombreOtroUsuario: string };
   EditarPerfil: undefined;
   EditarPerfilCliente: undefined;
+  PublicacionesFeed: undefined;
+  PublicarTrabajo: undefined;
 };

@@ -24,6 +24,8 @@ src/
     AvatarPicker.tsx          Avatar + control para elegir/subir una foto nueva
     RubroChipsSelector.tsx    Chips de selección múltiple de rubros
     RubroChipsList.tsx        Chips de solo lectura para mostrar los rubros de un trabajador
+    MainTabs.tsx              Pestañas "Trabajadores" / "Trabajos" (listado y feed)
+    PublicacionCard.tsx       Tarjeta de una publicación del feed: foto, autor opcional, descripción y fecha
   constants/
     rubros.ts                Lista de rubros/oficios del MVP
     departamentos.ts          19 departamentos de Uruguay + detección por cercanía
@@ -41,6 +43,7 @@ src/
     markdown.ts                 Parser markdown minimalista (headings, negrita, listas, itálica)
     chat.ts                     Obtener/crear conversación y chequear si un cliente ya contactó a un trabajador
     avatar.ts                   Elegir una foto y subirla al bucket "avatars" de Storage
+    publicaciones.ts            Elegir una foto de trabajo y subirla al bucket "publicaciones-fotos"
   navigation/
     RootNavigator.tsx         Cambia entre stack de auth y stack de la app según la sesión
     types.ts                  Param lists de cada stack
@@ -58,6 +61,8 @@ src/
     PrivacidadScreen.tsx       Política de Privacidad con buen formato
     MisChatsScreen.tsx         Lista de conversaciones del usuario (cliente o trabajador)
     ChatScreen.tsx             Chat de una conversación: burbujas, input y actualización en tiempo real (Supabase Realtime)
+    PublicacionesFeedScreen.tsx  Feed de fotos de trabajos de todos los trabajadores, más recientes primero
+    PublicarTrabajoScreen.tsx    Formulario para que un trabajador publique una foto + descripción corta opcional
   types/
     database.ts               Tipos generados a mano del esquema de Supabase
 supabase/
@@ -71,6 +76,7 @@ supabase/
     0007_perfil_automatico.sql  Trigger en auth.users que crea la fila de profiles automáticamente
     0008_avatars_storage.sql    Bucket público "avatars" + políticas de Storage por usuario
     0009_rubros_multiples.sql   Reemplaza `rubro` (uno) por `rubros` (array) + migra los datos existentes
+    0010_publicaciones.sql      Tabla `publicaciones` (feed de trabajos) + bucket público "publicaciones-fotos"
   seed.sql                    Trabajadores ficticios de prueba repartidos en varios departamentos
   functions/
     generar-perfil/           Edge Function: arma rubros/descripción/departamento con Claude (Anthropic)
@@ -91,6 +97,7 @@ supabase/
    - `supabase/migrations/0007_perfil_automatico.sql`
    - `supabase/migrations/0008_avatars_storage.sql`
    - `supabase/migrations/0009_rubros_multiples.sql`
+   - `supabase/migrations/0010_publicaciones.sql`
    - `supabase/seed.sql` (opcional, carga trabajadores de prueba para ver el listado funcionando)
 3. Desplegá la Edge Function `generar-perfil` y configurá su secreto (ver sección siguiente).
 4. Instalá dependencias y arrancá la app:
@@ -145,6 +152,29 @@ El filtro por rubro del listado sigue siendo de un chip a la vez, pero ahora bus
 tiene ese rubro entre los suyos?" en vez de "¿es exactamente ese?" — usa el operador `contains` de
 PostgREST (`rubros=cs.{valor}`, equivalente a `@>` en Postgres), así que un trabajador con varios
 rubros aparece en el filtro de cualquiera de ellos.
+
+## Feed de trabajos (publicaciones)
+
+La parte "red social" de la app: cada trabajador puede publicar fotos de changas ya hechas, con una
+descripción corta opcional, y todos los usuarios (trabajador o cliente) ven ese feed en una pestaña
+nueva. `MainTabs.tsx` alterna entre "👥 Trabajadores" (el listado de siempre) y "📸 Trabajos" (el
+feed) arriba de ambas pantallas — no se agregó una librería de bottom-tabs, es un segmented control
+liviano sobre el stack navigator existente, igual al resto de la navegación de la app.
+
+`publicaciones` (`0010_publicaciones.sql`) tiene `trabajador_id`, `imagen_url`, `descripcion`
+(opcional) y `created_at`. Cualquier usuario autenticado puede leer el feed completo (política de
+`select` abierta, como `profiles`); solo puede insertar una fila el propio trabajador dueño
+(`trabajador_id = auth.uid()` y su perfil es de tipo `trabajador`). Las fotos viven en el bucket
+público "publicaciones-fotos", con las mismas reglas que "avatars": lectura pública, escritura sólo
+en la carpeta `<user_id>/...` de quien sube, y sólo si es una cuenta trabajador.
+
+`PublicacionesFeedScreen.tsx` ordena por `created_at` descendente (el orden por premium queda para
+otra etapa) y resuelve el nombre/foto de cada autor con una consulta aparte a `profiles` (mismo
+patrón que `MisChatsScreen.tsx`, no hay relaciones anidadas vía PostgREST). El botón "+ Publicar un
+trabajo" sólo se muestra si el perfil logueado es de tipo `trabajador`, y lleva a
+`PublicarTrabajoScreen.tsx` (elegir foto + descripción, sube con `lib/publicaciones.ts` y crea la
+fila). `WorkerProfileScreen.tsx` reutiliza `PublicacionCard.tsx` sin el bloque de autor para mostrar,
+en una sección "Trabajos publicados", sólo las fotos de ese trabajador.
 
 ## Perfil de trabajador generado por IA
 

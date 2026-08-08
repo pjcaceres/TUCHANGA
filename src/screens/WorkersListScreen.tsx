@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import DepartamentoSelector from '../components/DepartamentoSelector';
+import MainTabs from '../components/MainTabs';
 import WorkerCard from '../components/WorkerCard';
 import {
   DEPARTAMENTO_POR_DEFECTO,
@@ -210,6 +211,14 @@ export default function WorkersListScreen({ navigation }: Props) {
         </View>
       </View>
 
+      <View style={styles.tabsSection}>
+        <MainTabs
+          activo="trabajadores"
+          onTrabajadores={() => {}}
+          onTrabajos={() => navigation.navigate('PublicacionesFeed')}
+        />
+      </View>
+
       {mostrarBannerPremium && (
         <View style={styles.bannerPremium}>
           <View style={styles.bannerPremioTexto}>
@@ -335,6 +344,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.textMuted,
+  },
+  tabsSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
   bannerPremium: {
     flexDirection: 'row',

@@ -11,6 +11,8 @@ import LoginScreen from '../screens/LoginScreen';
 import MisChatsScreen from '../screens/MisChatsScreen';
 import PremiumScreen from '../screens/PremiumScreen';
 import PrivacidadScreen from '../screens/PrivacidadScreen';
+import PublicacionesFeedScreen from '../screens/PublicacionesFeedScreen';
+import PublicarTrabajoScreen from '../screens/PublicarTrabajoScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import TerminosScreen from '../screens/TerminosScreen';
 import WorkerProfileScreen from '../screens/WorkerProfileScreen';
@@ -89,6 +91,16 @@ function AppNavigator() {
         name="EditarPerfilCliente"
         component={EditarPerfilClienteScreen}
         options={{ title: 'Editar perfil' }}
+      />
+      <AppStack.Screen
+        name="PublicacionesFeed"
+        component={PublicacionesFeedScreen}
+        options={{ headerShown: false }}
+      />
+      <AppStack.Screen
+        name="PublicarTrabajo"
+        component={PublicarTrabajoScreen}
+        options={{ title: 'Publicar un trabajo' }}
       />
     </AppStack.Navigator>
   );
