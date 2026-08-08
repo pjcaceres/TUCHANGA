@@ -20,7 +20,7 @@ src/
     WorkerCard.tsx            Tarjeta de trabajador en el listado
     DepartamentoSelector.tsx  Selector de departamento (modal + detección por GPS)
     MarkdownContent.tsx       Renderiza los documentos legales (títulos, negrita, listas)
-    Avatar.tsx                Foto de perfil (o inicial) + insignia de premium superpuesta
+    Avatar.tsx                Foto de perfil, o la inicial del nombre si no tiene una
     AvatarPicker.tsx          Avatar + control para elegir/subir una foto nueva
   constants/
     rubros.ts                Lista de rubros/oficios del MVP
@@ -183,10 +183,9 @@ mismo momento; si la confirmación de email está pendiente, se le avisa al trab
 terminar de subirla la primera vez que inicie sesión, en vez de intentarlo silenciosamente contra
 una sesión que todavía no existe (mismo tipo de bug que ya rompió la creación del perfil una vez).
 
-**Insignia de premium**: un trabajador con el plan premium vigente (`esPremiumVigente`) muestra un
-pequeño círculo con una estrella (⭐, el mismo símbolo que "⭐ Premium" y "Destacado") superpuesto en
-la esquina inferior derecha de su foto —además de la insignia "Destacado" que ya se mostraba junto
-al nombre— tanto en el listado como en su perfil.
+`Avatar.tsx` es solo la foto (o la inicial de respaldo) — no lleva ninguna insignia superpuesta. La
+única señal visual de que un trabajador tiene el plan premium vigente (`esPremiumVigente`) sigue
+siendo la insignia de texto "Destacado" junto a su nombre, tanto en el listado como en su perfil.
 
 ## Plan premium (freemium)
 
@@ -289,6 +288,6 @@ hay build step que los sincronice automáticamente).
 - [x] Generación de perfil por IA a partir de texto libre al registrarse (con revisión/edición antes de guardar)
 - [x] Plan premium: prioridad en el listado + insignia "Destacado" + pantalla de activación (sin cobro real todavía)
 - [x] Perfil de trabajador y de cliente editables desde la app luego del registro (con la opción de IA para trabajador)
-- [x] Foto de perfil (trabajador y cliente), con insignia de premium superpuesta para trabajadores destacados
+- [x] Foto de perfil (trabajador y cliente)
 - [ ] Dictado por audio (hoy funciona vía el micrófono del teclado del sistema, no hay grabación propia)
 - [ ] Cobro real del plan premium (Mercado Pago u otro medio) — hoy se activa sin costo para probar la lógica

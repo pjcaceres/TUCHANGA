@@ -18,12 +18,7 @@ export default function WorkerCard({ trabajador, distanciaKm, onPress }: Props) 
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={onPress}
     >
-      <Avatar
-        fotoUrl={trabajador.foto_url}
-        nombre={trabajador.nombre}
-        size={56}
-        esPremium={esPremiumVigente(trabajador)}
-      />
+      <Avatar fotoUrl={trabajador.foto_url} nombre={trabajador.nombre} size={56} />
 
       <View style={styles.info}>
         <View style={styles.nameRow}>
