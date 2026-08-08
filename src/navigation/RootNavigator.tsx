@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import ChatScreen from '../screens/ChatScreen';
 import ConfiguracionScreen from '../screens/ConfiguracionScreen';
 import DejarResenaScreen from '../screens/DejarResenaScreen';
+import EditarPerfilClienteScreen from '../screens/EditarPerfilClienteScreen';
 import EditarPerfilScreen from '../screens/EditarPerfilScreen';
 import LoginScreen from '../screens/LoginScreen';
 import MisChatsScreen from '../screens/MisChatsScreen';
@@ -82,6 +83,11 @@ function AppNavigator() {
       <AppStack.Screen
         name="EditarPerfil"
         component={EditarPerfilScreen}
+        options={{ title: 'Editar perfil' }}
+      />
+      <AppStack.Screen
+        name="EditarPerfilCliente"
+        component={EditarPerfilClienteScreen}
         options={{ title: 'Editar perfil' }}
       />
     </AppStack.Navigator>

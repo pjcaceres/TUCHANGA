@@ -13,6 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import AvatarPicker from '../components/AvatarPicker';
 import DepartamentoSelector from '../components/DepartamentoSelector';
 import {
   DEPARTAMENTO_POR_DEFECTO,
@@ -22,6 +23,7 @@ import {
 import { RUBROS, type RubroId } from '../constants/rubros';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { subirFotoDePerfil, type FotoElegida } from '../lib/avatar';
 import { supabase } from '../lib/supabase';
 import { esTelefonoValido } from '../lib/validacion';
 import type { AppStackParamList } from '../navigation/types';
@@ -45,6 +47,9 @@ export default function EditarPerfilScreen({ navigation }: Props) {
   const [rubro, setRubro] = useState<RubroId | null>(null);
   const [descripcion, setDescripcion] = useState('');
   const [departamento, setDepartamento] = useState<Departamento | null>(null);
+  const [fotoUrl, setFotoUrl] = useState<string | null>(null);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const [fotoError, setFotoError] = useState<string | null>(null);
 
   const [modoPerfil, setModoPerfil] = useState<ModoPerfil>('manual');
   const [textoLibre, setTextoLibre] = useState('');
@@ -99,6 +104,7 @@ export default function EditarPerfilScreen({ navigation }: Props) {
         setRubro(data.rubro);
         setDescripcion(data.descripcion ?? '');
         setDepartamento(data.departamento);
+        setFotoUrl(data.foto_url);
       }
       setCargando(false);
     }
@@ -109,6 +115,24 @@ export default function EditarPerfilScreen({ navigation }: Props) {
       cancelado = true;
     };
   }, [userId]);
+
+  const manejarFotoElegida = async (foto: FotoElegida) => {
+    if (!userId) return;
+
+    setFotoError(null);
+    setSubiendoFoto(true);
+
+    const { url, error: uploadError } = await subirFotoDePerfil(userId, foto);
+
+    setSubiendoFoto(false);
+
+    if (uploadError || !url) {
+      setFotoError(uploadError ?? 'No pudimos subir la foto. Probá de nuevo.');
+      return;
+    }
+
+    setFotoUrl(url);
+  };
 
   const generarConIA = async () => {
     setIaError(null);
@@ -178,6 +202,7 @@ export default function EditarPerfilScreen({ navigation }: Props) {
         rubro,
         descripcion: descripcion.trim() || null,
         departamento,
+        foto_url: fotoUrl,
       })
       .eq('id', userId);
 
@@ -212,6 +237,16 @@ export default function EditarPerfilScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.form}>
           <Text style={styles.sectionHeader}>Tus datos</Text>
+
+          <View style={styles.avatarRow}>
+            <AvatarPicker
+              fotoUrl={fotoUrl}
+              nombre={nombre || '?'}
+              subiendo={subiendoFoto}
+              onElegir={manejarFotoElegida}
+            />
+          </View>
+          {fotoError ? <Text style={styles.errorText}>{fotoError}</Text> : null}
 
           <Text style={styles.label}>Nombre completo</Text>
           <TextInput
@@ -423,6 +458,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: colors.primary,
+    marginBottom: 4,
+  },
+  avatarRow: {
+    alignItems: 'center',
+    marginTop: 12,
     marginBottom: 4,
   },
   divider: {

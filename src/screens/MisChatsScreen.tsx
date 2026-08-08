@@ -2,6 +2,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import Avatar from '../components/Avatar';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -13,6 +14,7 @@ type ChatItem = {
   conversacionId: string;
   otroUsuarioId: string;
   otroUsuarioNombre: string;
+  otroUsuarioFoto: string | null;
 };
 
 export default function MisChatsScreen({ navigation }: Props) {
@@ -63,20 +65,22 @@ export default function MisChatsScreen({ navigation }: Props) {
         );
 
         const { data: perfiles } = otrosIds.length
-          ? await supabase.from('profiles').select('id, nombre').in('id', otrosIds)
+          ? await supabase.from('profiles').select('id, nombre, foto_url').in('id', otrosIds)
           : { data: [] };
 
         if (cancelado) return;
 
-        const nombrePorId = new Map((perfiles ?? []).map((p) => [p.id, p.nombre]));
+        const perfilPorId = new Map((perfiles ?? []).map((p) => [p.id, p]));
 
         setChats(
           lista.map((c) => {
             const otroUsuarioId = c.cliente_id === userId ? c.trabajador_id : c.cliente_id;
+            const otroPerfil = perfilPorId.get(otroUsuarioId);
             return {
               conversacionId: c.id,
               otroUsuarioId,
-              otroUsuarioNombre: nombrePorId.get(otroUsuarioId) ?? 'Usuario',
+              otroUsuarioNombre: otroPerfil?.nombre ?? 'Usuario',
+              otroUsuarioFoto: otroPerfil?.foto_url ?? null,
             };
           })
         );
@@ -130,11 +134,7 @@ export default function MisChatsScreen({ navigation }: Props) {
             })
           }
         >
-          <View style={styles.avatar}>
-            <Text style={styles.avatarInicial}>
-              {item.otroUsuarioNombre.trim().charAt(0).toUpperCase() || '?'}
-            </Text>
-          </View>
+          <Avatar fotoUrl={item.otroUsuarioFoto} nombre={item.otroUsuarioNombre} size={44} />
           <Text style={styles.nombre}>{item.otroUsuarioNombre}</Text>
         </Pressable>
       )}
@@ -180,19 +180,6 @@ const styles = StyleSheet.create({
   },
   chatCardPressed: {
     opacity: 0.7,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInicial: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
   },
   nombre: {
     fontSize: 16,

@@ -20,6 +20,8 @@ src/
     WorkerCard.tsx            Tarjeta de trabajador en el listado
     DepartamentoSelector.tsx  Selector de departamento (modal + detección por GPS)
     MarkdownContent.tsx       Renderiza los documentos legales (títulos, negrita, listas)
+    Avatar.tsx                Foto de perfil (o inicial) + insignia de premium superpuesta
+    AvatarPicker.tsx          Avatar + control para elegir/subir una foto nueva
   constants/
     rubros.ts                Lista de rubros/oficios del MVP
     departamentos.ts          19 departamentos de Uruguay + detección por cercanía
@@ -36,6 +38,7 @@ src/
     validacion.ts               Validación de teléfono del registro
     markdown.ts                 Parser markdown minimalista (headings, negrita, listas, itálica)
     chat.ts                     Obtener/crear conversación y chequear si un cliente ya contactó a un trabajador
+    avatar.ts                   Elegir una foto y subirla al bucket "avatars" de Storage
   navigation/
     RootNavigator.tsx         Cambia entre stack de auth y stack de la app según la sesión
     types.ts                  Param lists de cada stack
@@ -46,8 +49,9 @@ src/
     WorkerProfileScreen.tsx    Perfil completo: descripción, historial de trabajos, reseñas, botón "Contactar" y "Dejar reseña" (habilitado solo si ya lo contactó)
     PremiumScreen.tsx          Activar/renovar el plan premium (visibilidad + insignia) del propio perfil
     DejarResenaScreen.tsx      Formulario de reseña (estrellas + trabajo realizado + comentario) para clientes
-    ConfiguracionScreen.tsx    Acceso a Editar perfil (solo trabajador), Términos, Privacidad y Cerrar sesión
-    EditarPerfilScreen.tsx     Edita el perfil de un trabajador ya registrado (con la misma opción de IA del registro)
+    ConfiguracionScreen.tsx    Acceso a Editar perfil, Términos, Privacidad y Cerrar sesión
+    EditarPerfilScreen.tsx     Edita el perfil de un trabajador ya registrado (foto, IA, etc.)
+    EditarPerfilClienteScreen.tsx  Edita el perfil de un cliente ya registrado (solo nombre y foto)
     TerminosScreen.tsx         Términos y Condiciones con buen formato
     PrivacidadScreen.tsx       Política de Privacidad con buen formato
     MisChatsScreen.tsx         Lista de conversaciones del usuario (cliente o trabajador)
@@ -63,6 +67,7 @@ supabase/
     0005_chat.sql               Tablas `conversaciones` y `mensajes` con RLS + Realtime
     0006_quitar_precio.sql      Elimina la columna `precio_orientativo` de `profiles`
     0007_perfil_automatico.sql  Trigger en auth.users que crea la fila de profiles automáticamente
+    0008_avatars_storage.sql    Bucket público "avatars" + políticas de Storage por usuario
   seed.sql                    Trabajadores ficticios de prueba repartidos en varios departamentos
   functions/
     generar-perfil/           Edge Function: arma rubro/descripción/departamento con Claude (Anthropic)
@@ -81,6 +86,7 @@ supabase/
    - `supabase/migrations/0005_chat.sql`
    - `supabase/migrations/0006_quitar_precio.sql`
    - `supabase/migrations/0007_perfil_automatico.sql`
+   - `supabase/migrations/0008_avatars_storage.sql`
    - `supabase/seed.sql` (opcional, carga trabajadores de prueba para ver el listado funcionando)
 3. Desplegá la Edge Function `generar-perfil` y configurá su secreto (ver sección siguiente).
 4. Instalá dependencias y arrancá la app:
@@ -140,15 +146,46 @@ También se puede hacer con el [CLI de Supabase](https://supabase.com/docs/guide
 La app la invoca vía `supabase.functions.invoke('generar-perfil', { body: { texto } })` usando el
 anon key normal — no hace falta ninguna variable de entorno adicional del lado del cliente.
 
-## Editar perfil (trabajador)
+## Editar perfil
 
-Un trabajador ya registrado puede tocar "Editar perfil" en "⚙️ Configuración" (no aparece para
-usuarios tipo cliente) y llega a `EditarPerfilScreen.tsx` con su nombre, teléfono, departamento,
-rubro y descripción precargados desde su propia fila de `profiles`. Tiene la misma opción
-"Describir con IA" que el registro: escribe un texto libre, la Edge Function `generar-perfil`
-sugiere rubro/descripción (y departamento, si lo menciona), y el trabajador revisa/edita ese
-resultado antes de confirmar. "Guardar cambios" hace un `update` sobre su fila existente
-(`eq('id', userId)`) — nunca inserta un perfil nuevo.
+"Editar perfil" en "⚙️ Configuración" lleva a una pantalla distinta según el tipo de cuenta:
+- **Trabajador** → `EditarPerfilScreen.tsx`, con nombre, teléfono, foto, departamento, rubro y
+  descripción precargados desde su propia fila de `profiles`. Tiene la misma opción "Describir con
+  IA" que el registro: escribe un texto libre, la Edge Function `generar-perfil` sugiere
+  rubro/descripción (y departamento, si lo menciona), y el trabajador revisa/edita ese resultado
+  antes de confirmar.
+- **Cliente** → `EditarPerfilClienteScreen.tsx`, mucho más simple: solo nombre y foto.
+
+En ambos casos "Guardar cambios" hace un `update` sobre la fila existente (`eq('id', userId)`) —
+nunca inserta un perfil nuevo.
+
+## Fotos de perfil
+
+Las fotos (cara del trabajador o logo de su changa/empresa, foto del cliente) se guardan en el
+bucket público `avatars` de Supabase Storage y su URL pública se guarda en `profiles.foto_url`
+(columna que ya existía desde el registro inicial — no hizo falta agregar una nueva). Cada usuario
+sólo puede subir/actualizar/borrar archivos dentro de su propia carpeta (`<user_id>/...`); la
+lectura es pública para que se vea en el listado y en el perfil sin necesidad de estar logueado.
+Cada subida usa un nombre de archivo único (`avatar-<timestamp>.<ext>`) en vez de pisar siempre el
+mismo, así el cambio no se hace "visible" hasta que efectivamente se toca "Guardar cambios".
+
+`AvatarPicker.tsx` (usado en el registro y en las dos pantallas de "Editar perfil") abre el
+selector de imágenes del dispositivo (`expo-image-picker`, con recorte cuadrado incluido), sube el
+archivo elegido y muestra una vista previa. `Avatar.tsx` es el componente de sólo lectura que se
+usa en todos los lugares donde antes se mostraba el círculo con la inicial — listado, perfil del
+trabajador y "Mis chats" — y si la imagen no carga (URL rota, sin conexión) cae de vuelta a esa
+misma inicial en lugar de mostrar un espacio roto.
+
+**Foto al registrarse**: solo se pide para trabajador (el cliente la agrega después desde "Editar
+perfil"). Como `signUp()` puede no devolver una sesión activa todavía (ver "Registro y creación del
+perfil" más arriba), la foto elegida en el formulario recién se sube si hay sesión disponible en el
+mismo momento; si la confirmación de email está pendiente, se le avisa al trabajador que va a poder
+terminar de subirla la primera vez que inicie sesión, en vez de intentarlo silenciosamente contra
+una sesión que todavía no existe (mismo tipo de bug que ya rompió la creación del perfil una vez).
+
+**Insignia de premium**: un trabajador con el plan premium vigente (`esPremiumVigente`) muestra un
+pequeño círculo con un check (✓) superpuesto en la esquina inferior derecha de su foto —además de
+la insignia "Destacado" que ya se mostraba junto al nombre— tanto en el listado como en su perfil.
 
 ## Plan premium (freemium)
 
@@ -250,7 +287,7 @@ hay build step que los sincronice automáticamente).
 - [x] Términos y Condiciones / Política de Privacidad integrados, con aceptación obligatoria al registrarse
 - [x] Generación de perfil por IA a partir de texto libre al registrarse (con revisión/edición antes de guardar)
 - [x] Plan premium: prioridad en el listado + insignia "Destacado" + pantalla de activación (sin cobro real todavía)
-- [x] Perfil de trabajador editable desde la app luego del registro (con la opción de IA del registro)
-- [ ] Foto de perfil editable desde la app
+- [x] Perfil de trabajador y de cliente editables desde la app luego del registro (con la opción de IA para trabajador)
+- [x] Foto de perfil (trabajador y cliente), con insignia de premium superpuesta para trabajadores destacados
 - [ ] Dictado por audio (hoy funciona vía el micrófono del teclado del sistema, no hay grabación propia)
 - [ ] Cobro real del plan premium (Mercado Pago u otro medio) — hoy se activa sin costo para probar la lógica

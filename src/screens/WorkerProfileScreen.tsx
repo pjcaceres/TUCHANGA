@@ -1,7 +1,8 @@
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Avatar from '../components/Avatar';
 import StarRating from '../components/StarRating';
 import { rubroLabel } from '../constants/rubros';
 import { colors } from '../constants/theme';
@@ -118,7 +119,6 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
     );
   }
 
-  const inicial = trabajador.nombre.trim().charAt(0).toUpperCase() || '?';
   const esOtroUsuario = trabajador.id !== session?.user.id;
   const puedeDejarResena = esCliente && esOtroUsuario && haContactado;
   const necesitaContactarPrimero = esCliente && esOtroUsuario && !haContactado;
@@ -126,13 +126,14 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.headerCard}>
-        {trabajador.foto_url ? (
-          <Image source={{ uri: trabajador.foto_url }} style={styles.photo} />
-        ) : (
-          <View style={[styles.photo, styles.photoPlaceholder]}>
-            <Text style={styles.photoInitial}>{inicial}</Text>
-          </View>
-        )}
+        <View style={styles.photoWrap}>
+          <Avatar
+            fotoUrl={trabajador.foto_url}
+            nombre={trabajador.nombre}
+            size={88}
+            esPremium={esPremiumVigente(trabajador)}
+          />
+        </View>
         <View style={styles.nombreRow}>
           <Text style={styles.nombre}>{trabajador.nombre}</Text>
           {esPremiumVigente(trabajador) && (
@@ -256,21 +257,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  photo: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+  photoWrap: {
     marginBottom: 8,
-  },
-  photoPlaceholder: {
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photoInitial: {
-    color: '#fff',
-    fontSize: 32,
-    fontWeight: '700',
   },
   nombreRow: {
     flexDirection: 'row',

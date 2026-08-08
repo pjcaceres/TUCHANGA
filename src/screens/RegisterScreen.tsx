@@ -13,6 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import AvatarPicker from '../components/AvatarPicker';
 import DepartamentoSelector from '../components/DepartamentoSelector';
 import {
   DEPARTAMENTO_POR_DEFECTO,
@@ -21,6 +22,7 @@ import {
 } from '../constants/departamentos';
 import { RUBROS, type RubroId } from '../constants/rubros';
 import { colors } from '../constants/theme';
+import { subirFotoDePerfil, type FotoElegida } from '../lib/avatar';
 import { supabase } from '../lib/supabase';
 import { esTelefonoValido } from '../lib/validacion';
 import type { AuthStackParamList } from '../navigation/types';
@@ -53,6 +55,8 @@ export default function RegisterScreen({ navigation }: Props) {
   const [iaError, setIaError] = useState<string | null>(null);
   const [iaGenerado, setIaGenerado] = useState(false);
   const [detectandoUbicacion, setDetectandoUbicacion] = useState(false);
+  const [fotoElegida, setFotoElegida] = useState<FotoElegida | null>(null);
+  const [fotoNoSubida, setFotoNoSubida] = useState(false);
 
   const detectarUbicacion = async () => {
     setDetectandoUbicacion(true);
@@ -174,11 +178,26 @@ export default function RegisterScreen({ navigation }: Props) {
     }
 
     if (data.user && data.session) {
-      // Ya queda logueado (confirmación de email deshabilitada): el
-      // RootNavigator pasa solo al AppStack en cuanto detecta la sesión.
+      // Ya queda logueado (confirmación de email deshabilitada), así que ya
+      // hay una sesión real para subir la foto a Storage. Si no hay sesión
+      // todavía (confirmación pendiente) no se puede: las políticas de
+      // storage.objects exigen auth.uid(), y acá no lo hay hasta que el
+      // trabajador confirme el email y inicie sesión por primera vez.
+      if (fotoElegida) {
+        const { url, error: fotoError } = await subirFotoDePerfil(data.user.id, fotoElegida);
+        if (url) {
+          await supabase.from('profiles').update({ foto_url: url }).eq('id', data.user.id);
+        } else if (fotoError) {
+          console.error('No pudimos subir la foto de perfil:', fotoError);
+        }
+      }
+      // El RootNavigator pasa solo al AppStack en cuanto detecta la sesión.
       return;
     }
 
+    if (fotoElegida) {
+      setFotoNoSubida(true);
+    }
     setConfirmarEmail(true);
   };
 
@@ -190,6 +209,12 @@ export default function RegisterScreen({ navigation }: Props) {
           Te enviamos un link de confirmación a {email}. Una vez confirmado, iniciá sesión con tu
           cuenta.
         </Text>
+        {fotoNoSubida && (
+          <Text style={styles.subtitle}>
+            Tu foto de perfil todavía no se subió — vas a poder agregarla desde "Editar perfil"
+            apenas inicies sesión por primera vez.
+          </Text>
+        )}
         <Pressable style={styles.button} onPress={() => navigation.navigate('Login')}>
           <Text style={styles.buttonText}>Ir a iniciar sesión</Text>
         </Pressable>
@@ -279,6 +304,17 @@ export default function RegisterScreen({ navigation }: Props) {
             <>
               <View style={styles.divider} />
               <Text style={styles.sectionHeader}>Tu perfil de trabajador</Text>
+
+              <Text style={styles.label}>Foto de perfil (opcional)</Text>
+              <Text style={styles.helperText}>
+                Tu cara o el logo de tu changa/empresa. Los clientes la van a ver en el listado y
+                en tu perfil.
+              </Text>
+              <AvatarPicker
+                fotoUrl={fotoElegida?.uri ?? null}
+                nombre={nombre || '?'}
+                onElegir={setFotoElegida}
+              />
 
               <Text style={styles.label}>¿Cómo querés armar tu perfil?</Text>
               <View style={styles.toggleRow}>

@@ -1,8 +1,9 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { rubroLabel } from '../constants/rubros';
 import { colors } from '../constants/theme';
 import { esPremiumVigente } from '../lib/premium';
 import type { Profile } from '../types/database';
+import Avatar from './Avatar';
 import StarRating from './StarRating';
 
 interface Props {
@@ -12,20 +13,17 @@ interface Props {
 }
 
 export default function WorkerCard({ trabajador, distanciaKm, onPress }: Props) {
-  const inicial = trabajador.nombre.trim().charAt(0).toUpperCase() || '?';
-
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={onPress}
     >
-      {trabajador.foto_url ? (
-        <Image source={{ uri: trabajador.foto_url }} style={styles.photo} />
-      ) : (
-        <View style={[styles.photo, styles.photoPlaceholder]}>
-          <Text style={styles.photoInitial}>{inicial}</Text>
-        </View>
-      )}
+      <Avatar
+        fotoUrl={trabajador.foto_url}
+        nombre={trabajador.nombre}
+        size={56}
+        esPremium={esPremiumVigente(trabajador)}
+      />
 
       <View style={styles.info}>
         <View style={styles.nameRow}>
@@ -74,21 +72,6 @@ const styles = StyleSheet.create({
   },
   cardPressed: {
     backgroundColor: colors.background,
-  },
-  photo: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-  },
-  photoPlaceholder: {
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photoInitial: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: '700',
   },
   info: {
     flex: 1,

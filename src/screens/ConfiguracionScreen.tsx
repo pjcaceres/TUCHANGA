@@ -6,12 +6,13 @@ import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
+import type { TipoUsuario } from '../types/database';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Configuracion'>;
 
 export default function ConfiguracionScreen({ navigation }: Props) {
   const { session } = useAuth();
-  const [esTrabajador, setEsTrabajador] = useState(false);
+  const [tipoUsuario, setTipoUsuario] = useState<TipoUsuario | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -25,7 +26,7 @@ export default function ConfiguracionScreen({ navigation }: Props) {
         .eq('id', userId)
         .maybeSingle()
         .then(({ data }) => {
-          if (!cancelado) setEsTrabajador(data?.tipo_usuario === 'trabajador');
+          if (!cancelado) setTipoUsuario(data?.tipo_usuario ?? null);
         });
 
       return () => {
@@ -36,8 +37,15 @@ export default function ConfiguracionScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      {esTrabajador && (
-        <Pressable style={styles.item} onPress={() => navigation.navigate('EditarPerfil')}>
+      {tipoUsuario && (
+        <Pressable
+          style={styles.item}
+          onPress={() =>
+            navigation.navigate(
+              tipoUsuario === 'trabajador' ? 'EditarPerfil' : 'EditarPerfilCliente'
+            )
+          }
+        >
           <Text style={styles.itemText}>Editar perfil</Text>
           <Text style={styles.chevron}>›</Text>
         </Pressable>
