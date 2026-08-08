@@ -26,13 +26,7 @@ import { distanciaKm } from '../lib/geo';
 import { esPremiumVigente } from '../lib/premium';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
-import type { Profile, TipoUsuario } from '../types/database';
-
-type MiPerfilPremium = {
-  tipo_usuario: TipoUsuario;
-  es_premium: boolean;
-  premium_hasta: string | null;
-};
+import type { Profile } from '../types/database';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'WorkersList'>;
 
@@ -48,7 +42,7 @@ export default function WorkersListScreen({ navigation }: Props) {
   const [userCoords, setUserCoords] = useState<Coords | null>(null);
   const [detectando, setDetectando] = useState(false);
   const [ubicacionError, setUbicacionError] = useState<string | null>(null);
-  const [miPerfil, setMiPerfil] = useState<MiPerfilPremium | null>(null);
+  const [miPerfil, setMiPerfil] = useState<Profile | null>(null);
   const [bannerPremiumCerrado, setBannerPremiumCerrado] = useState(false);
 
   const [trabajadores, setTrabajadores] = useState<Profile[]>([]);
@@ -59,6 +53,8 @@ export default function WorkersListScreen({ navigation }: Props) {
 
   // useFocusEffect (en vez de un useEffect único) para reintentar la consulta
   // cada vez que se vuelve a esta pantalla, por si la primera vez falló.
+  // Usa select('*') (en vez de columnas puntuales) para no depender de que
+  // el cache de esquema de PostgREST tenga cada columna nueva al día.
   useFocusEffect(
     useCallback(() => {
       let cancelado = false;
@@ -67,11 +63,15 @@ export default function WorkersListScreen({ navigation }: Props) {
 
       supabase
         .from('profiles')
-        .select('tipo_usuario, es_premium, premium_hasta')
+        .select('*')
         .eq('id', userId)
         .maybeSingle()
-        .then(({ data }) => {
-          if (!cancelado) setMiPerfil(data ?? null);
+        .then(({ data, error: fetchError }) => {
+          if (cancelado) return;
+          if (fetchError) {
+            console.error('No pudimos verificar el tipo de usuario para Premium:', fetchError.message);
+          }
+          setMiPerfil(data ?? null);
         });
 
       return () => {

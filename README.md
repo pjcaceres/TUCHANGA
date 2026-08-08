@@ -142,7 +142,12 @@ perfil" ya existente). Cuando se integre un medio de pago (Mercado Pago u otro),
 iniciar el cobro y sólo al confirmarse se actualizan esos mismos campos. El link "⭐ Premium" solo
 aparece si el usuario logueado es de tipo trabajador (no tiene sentido para un cliente); esa
 verificación se reintenta cada vez que se vuelve al listado (`useFocusEffect`), no solo una vez al
-entrar, para que un fallo puntual de red no la deje oculta indefinidamente.
+entrar, para que un fallo puntual de red no la deje oculta indefinidamente. La consulta pide
+`select('*')` (en vez de columnas puntuales) para no depender de que el cache de esquema de
+PostgREST tenga al día alguna columna agregada por una migración reciente (p. ej. `premium_hasta`);
+si de todas formas falla, el error queda logueado en la consola del navegador en vez de fallar en
+silencio — si "⭐ Premium" no aparece para una cuenta de trabajador, lo primero a revisar es esa
+consola y confirmar que las migraciones `0001` a `0006` estén todas aplicadas.
 
 Mientras un trabajador no tenga el plan premium vigente, ve un banner descartable arriba del
 listado ("⭐ Hacete Premium…") con los mismos beneficios y un acceso directo a la pantalla. Al
