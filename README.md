@@ -39,6 +39,7 @@ src/
     privacidad.ts              Política de Privacidad (copia embebida de tuchanga-politica-de-privacidad.md)
   contexts/
     AuthContext.tsx          Sesión de Supabase Auth disponible en toda la app
+    ProfileContext.tsx        Cachea el propio perfil (profiles) a nivel app, para que no se resetee al cambiar de pestaña
   lib/
     supabase.ts              Cliente de Supabase (usa variables de entorno EXPO_PUBLIC_*)
     geo.ts                    Distancia entre dos coordenadas (fórmula haversine)
@@ -164,7 +165,7 @@ rubros aparece en el filtro de cualquiera de ellos.
 
 La parte "red social" de la app: cada trabajador puede publicar fotos de changas ya hechas, con una
 descripción corta opcional, y todos los usuarios (trabajador o cliente) ven ese feed en una pestaña
-nueva. `MainTabs.tsx` alterna entre "👥 Trabajadores" (el listado de siempre), "📸 Publicaciones" (el
+nueva. `MainTabs.tsx` alterna entre "🔨 Trabajadores" (el listado de siempre), "📸 Publicaciones" (el
 feed) y, sólo para cuentas trabajador, "👤 Mi Perfil" — es un segmented control liviano sobre el stack
 navigator existente, sin agregar una librería de bottom-tabs. `AppHeader.tsx` agrupa el título
 "TuChanga", `HeaderMenu.tsx` (el ícono "⋮" con Premium/Mis chats/Configuración, ver más abajo) y
@@ -220,6 +221,18 @@ nombre, `RubroChipsList.tsx`, calificación) más un botón "Editar perfil" y el
 (vigente o no, con acceso directo a `PremiumScreen.tsx`), y abajo todas las publicaciones propias en
 `PublicacionesGrid.tsx` — una cuadrícula de miniaturas cuadradas de 3 columnas, estilo Instagram,
 distinta del layout de tarjeta completa que usa el feed.
+
+`WorkersListScreen.tsx` y `PublicacionesFeedScreen.tsx` son rutas de un mismo stack navigator (no un
+tab navigator real), así que React Navigation las mantiene montadas de fondo — pero cada una tenía su
+propio `useState` + fetch de `tipo_usuario` para decidir si mostrar "Mi Perfil", arrancando en `false`
+cada vez que se volvía a esa pantalla. Como ese fetch tarda un instante en resolver, la pestaña
+"Mi Perfil" se ocultaba y volvía a aparecer — un parpadeo visible al cambiar entre "Trabajadores" y
+"Publicaciones" (no pasaba entrando directo a "Mi Perfil", porque esa pantalla no depende de ningún
+fetch para saber que el usuario es trabajador). La solución fue sacar ese dato de cada pantalla:
+`ProfileContext.tsx` guarda el propio perfil una sola vez a nivel de toda la app (con un `refrescar()`
+que las pantallas siguen llamando al enfocarse, para que el estado de Premium se mantenga al día), así
+que `tipo_usuario` — que nunca cambia durante la sesión — está disponible de entrada sin importar
+cuántas veces React Navigation vuelva a montar la pantalla.
 
 ## Perfil de trabajador generado por IA
 

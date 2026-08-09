@@ -25,7 +25,7 @@ export default function MainTabs({
         onPress={onTrabajadores}
       >
         <Text style={[styles.tabText, activo === 'trabajadores' && styles.tabTextActive]}>
-          👥 Trabajadores
+          🔨 Trabajadores
         </Text>
       </Pressable>
       <Pressable

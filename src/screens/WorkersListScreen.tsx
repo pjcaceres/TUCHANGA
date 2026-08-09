@@ -23,6 +23,7 @@ import {
 import { RUBROS, type RubroId } from '../constants/rubros';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { useMiPerfil } from '../contexts/ProfileContext';
 import { distanciaKm } from '../lib/geo';
 import { esPremiumVigente } from '../lib/premium';
 import { supabase } from '../lib/supabase';
@@ -43,42 +44,25 @@ export default function WorkersListScreen({ navigation }: Props) {
   const [userCoords, setUserCoords] = useState<Coords | null>(null);
   const [detectando, setDetectando] = useState(false);
   const [ubicacionError, setUbicacionError] = useState<string | null>(null);
-  const [miPerfil, setMiPerfil] = useState<Profile | null>(null);
   const [bannerPremiumCerrado, setBannerPremiumCerrado] = useState(false);
 
   const [trabajadores, setTrabajadores] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // El propio perfil viene de un contexto compartido en vez de un fetch acá:
+  // así el valor no se resetea a null cada vez que React Navigation vuelve a
+  // montar esta pantalla (por ejemplo al ir y volver entre pestañas), que es
+  // lo que hacía parpadear elementos condicionados a "esTrabajador" (como la
+  // pestaña "Mi Perfil"). Igual se refresca al enfocar, para que el estado
+  // de Premium (que sí cambia con el tiempo) se mantenga al día.
+  const { perfil: miPerfil, refrescar: refrescarMiPerfil } = useMiPerfil();
   const esTrabajador = miPerfil?.tipo_usuario === 'trabajador';
 
-  // useFocusEffect (en vez de un useEffect único) para reintentar la consulta
-  // cada vez que se vuelve a esta pantalla, por si la primera vez falló.
-  // Usa select('*') (en vez de columnas puntuales) para no depender de que
-  // el cache de esquema de PostgREST tenga cada columna nueva al día.
   useFocusEffect(
     useCallback(() => {
-      let cancelado = false;
-      const userId = session?.user.id;
-      if (!userId) return;
-
-      supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle()
-        .then(({ data, error: fetchError }) => {
-          if (cancelado) return;
-          if (fetchError) {
-            console.error('No pudimos verificar el tipo de usuario para Premium:', fetchError.message);
-          }
-          setMiPerfil(data ?? null);
-        });
-
-      return () => {
-        cancelado = true;
-      };
-    }, [session?.user.id])
+      refrescarMiPerfil();
+    }, [refrescarMiPerfil])
   );
 
   useEffect(() => {

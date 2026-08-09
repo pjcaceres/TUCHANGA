@@ -7,6 +7,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import PublicacionCard from '../components/PublicacionCard';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { useMiPerfil } from '../contexts/ProfileContext';
 import { eliminarPublicacion } from '../lib/publicaciones';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
@@ -20,9 +21,15 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
   const { session } = useAuth();
   const userId = session?.user.id;
 
+  // Igual que en WorkersListScreen: "esTrabajador" sale del contexto
+  // compartido (no de un fetch propio de esta pantalla) para que no
+  // arranque en false cada vez que React Navigation vuelve a montarla al
+  // cambiar de pestaña, lo que hacía parpadear la pestaña "Mi Perfil".
+  const { perfil: miPerfil } = useMiPerfil();
+  const esTrabajador = miPerfil?.tipo_usuario === 'trabajador';
+
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
   const [autoresPorId, setAutoresPorId] = useState<Map<string, Autor>>(new Map());
-  const [esTrabajador, setEsTrabajador] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorPublicacion, setErrorPublicacion] = useState<string | null>(null);
@@ -36,16 +43,12 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
         setLoading(true);
         setError(null);
 
-        const [{ data: miPerfil }, { data: feed, error: feedError }] = await Promise.all([
-          userId
-            ? supabase.from('profiles').select('tipo_usuario').eq('id', userId).maybeSingle()
-            : Promise.resolve({ data: null }),
-          supabase.from('publicaciones').select('*').order('created_at', { ascending: false }),
-        ]);
+        const { data: feed, error: feedError } = await supabase
+          .from('publicaciones')
+          .select('*')
+          .order('created_at', { ascending: false });
 
         if (cancelado) return;
-
-        setEsTrabajador(miPerfil?.tipo_usuario === 'trabajador');
 
         if (feedError) {
           setError(feedError.message);
@@ -75,7 +78,7 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
       return () => {
         cancelado = true;
       };
-    }, [userId])
+    }, [])
   );
 
   const confirmarBorrado = async () => {
