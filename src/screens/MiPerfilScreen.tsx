@@ -4,12 +4,14 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import AppHeader from '../components/AppHeader';
 import Avatar from '../components/Avatar';
+import ConfirmDialog from '../components/ConfirmDialog';
 import PublicacionesGrid from '../components/PublicacionesGrid';
 import RubroChipsList from '../components/RubroChipsList';
 import StarRating from '../components/StarRating';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { esPremiumVigente } from '../lib/premium';
+import { eliminarPublicacion } from '../lib/publicaciones';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
 import type { Profile, Publicacion } from '../types/database';
@@ -24,6 +26,8 @@ export default function MiPerfilScreen({ navigation }: Props) {
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorPublicacion, setErrorPublicacion] = useState<string | null>(null);
+  const [aBorrarId, setABorrarId] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -65,6 +69,22 @@ export default function MiPerfilScreen({ navigation }: Props) {
       };
     }, [userId])
   );
+
+  const confirmarBorrado = async () => {
+    const publicacionId = aBorrarId;
+    setABorrarId(null);
+    if (!publicacionId) return;
+
+    setErrorPublicacion(null);
+    const anteriores = publicaciones;
+    setPublicaciones((actuales) => actuales.filter((p) => p.id !== publicacionId));
+
+    const { error: deleteError } = await eliminarPublicacion(publicacionId);
+    if (deleteError) {
+      setPublicaciones(anteriores);
+      setErrorPublicacion(deleteError);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -121,16 +141,27 @@ export default function MiPerfilScreen({ navigation }: Props) {
             <Text style={styles.sectionTitle}>
               Mis publicaciones {publicaciones.length > 0 ? `(${publicaciones.length})` : ''}
             </Text>
+            {errorPublicacion && <Text style={styles.errorText}>{errorPublicacion}</Text>}
             {publicaciones.length === 0 ? (
               <Text style={styles.sinPublicaciones}>
                 Todavía no publicaste ninguna foto de trabajo.
               </Text>
             ) : (
-              <PublicacionesGrid publicaciones={publicaciones} />
+              <PublicacionesGrid publicaciones={publicaciones} onEliminar={setABorrarId} />
             )}
           </View>
         </ScrollView>
       )}
+
+      <ConfirmDialog
+        visible={aBorrarId !== null}
+        titulo="Eliminar publicación"
+        mensaje="¿Estás seguro que querés eliminar esta publicación? Esta acción no se puede deshacer."
+        textoConfirmar="Eliminar"
+        destructivo
+        onConfirmar={confirmarBorrado}
+        onCancelar={() => setABorrarId(null)}
+      />
     </View>
   );
 }

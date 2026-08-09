@@ -13,6 +13,9 @@ jardinería, limpieza, pintura, gasista, cerrajero, mudanzas, etc.) con clientes
 
 ```
 App.tsx                     Entry point: providers + navegación
+assets/
+  LogoTuchangaPng.png        Logo original de la app (ícono + wordmark, con glow, fondo transparente)
+  logo-header.png            Recorte de LogoTuchangaPng.png sin el margen transparente del glow, usado en AppHeader.tsx
 src/
   components/
     StarRating.tsx           Estrellas + promedio (usado en tarjeta y perfil)
@@ -25,7 +28,7 @@ src/
     RubroChipsSelector.tsx    Chips de selección múltiple de rubros
     RubroChipsList.tsx        Chips de solo lectura para mostrar los rubros de un trabajador
     MainTabs.tsx              Pestañas "Trabajadores" / "Publicaciones" / "Mi Perfil" (esta última solo trabajador)
-    AppHeader.tsx             Header compartido (título + HeaderMenu + MainTabs) para que no cambie entre pestañas
+    AppHeader.tsx             Header compartido (logo + HeaderMenu + MainTabs) para que no cambie entre pestañas
     HeaderMenu.tsx            Menú "⋮" desplegable con Premium (solo trabajador) / Mis chats / Configuración
     PublicacionCard.tsx       Tarjeta de una publicación del feed: foto, autor opcional, descripción y fecha
     PublicacionesGrid.tsx     Cuadrícula estilo Instagram de miniaturas (usada en Mi Perfil)
@@ -167,10 +170,11 @@ La parte "red social" de la app: cada trabajador puede publicar fotos de changas
 descripción corta opcional, y todos los usuarios (trabajador o cliente) ven ese feed en una pestaña
 nueva. `MainTabs.tsx` alterna entre "🔨 Trabajadores" (el listado de siempre), "📸 Publicaciones" (el
 feed) y, sólo para cuentas trabajador, "👤 Mi Perfil" — es un segmented control liviano sobre el stack
-navigator existente, sin agregar una librería de bottom-tabs. `AppHeader.tsx` agrupa el título
-"TuChanga", `HeaderMenu.tsx` (el ícono "⋮" con Premium/Mis chats/Configuración, ver más abajo) y
-`MainTabs.tsx` en un solo componente que usan `WorkersListScreen.tsx`, `PublicacionesFeedScreen.tsx`
-y `MiPerfilScreen.tsx`, para que cambiar de pestaña nunca haga desaparecer esos accesos.
+navigator existente, sin agregar una librería de bottom-tabs. `AppHeader.tsx` agrupa el logo (ver
+`assets/logo-header.png` más abajo), `HeaderMenu.tsx` (el ícono "⋮" con Premium/Mis chats/
+Configuración, ver más abajo) y `MainTabs.tsx` en un solo componente que usan
+`WorkersListScreen.tsx`, `PublicacionesFeedScreen.tsx` y `MiPerfilScreen.tsx`, para que cambiar de
+pestaña nunca haga desaparecer esos accesos.
 
 `publicaciones` (`0010_publicaciones.sql`) tiene `trabajador_id`, `imagen_url`, `descripcion`
 (opcional) y `created_at`. Cualquier usuario autenticado puede leer el feed completo (política de
@@ -190,14 +194,16 @@ en una sección "Trabajos publicados", sólo las fotos de ese trabajador.
 
 `PublicacionCard.tsx` tiene la foto ocupando el ancho completo de la tarjeta (relación 4:5, estilo
 Instagram) con el autor arriba y la descripción/fecha abajo — ni un cuadradito chico ni una foto a
-pantalla completa. Cuando la publicación es del trabajador que está mirando el feed (o su propio
-perfil), la tarjeta muestra "Tu publicación" y un botón "Eliminar"; no aparece en las publicaciones
-de otros trabajadores.
+pantalla completa. En el feed (`PublicacionesFeedScreen.tsx`) se ve igual para todos, sin ningún
+control especial aunque la publicación sea propia — administrar (borrar) las propias publicaciones
+se hace desde "Mi Perfil" (ver más abajo), no desde el feed. `WorkerProfileScreen.tsx` sí sigue
+pasándole `esPropia`/`onEliminar` cuando el propio trabajador ve su perfil público, mostrando "Tu
+publicación" y un botón "Eliminar" ahí.
 
-Tocar "Eliminar" abre `ConfirmDialog.tsx` (un `Modal` propio, no `Alert.alert` de React Native — en
-react-native-web esa API es un no-op y no muestra nada) para confirmar antes de borrar. Al confirmar,
-`eliminarPublicacion()` en `lib/publicaciones.ts` hace `.delete().eq('id', …).select('id')`: si la
-política RLS de borrado bloquea la fila (por ejemplo, si `0011_publicaciones_borrado.sql` no se
+Borrar (desde donde sea) abre `ConfirmDialog.tsx` (un `Modal` propio, no `Alert.alert` de React
+Native — en react-native-web esa API es un no-op y no muestra nada) para confirmar antes. Al
+confirmar, `eliminarPublicacion()` en `lib/publicaciones.ts` hace `.delete().eq('id', …).select('id')`:
+si la política RLS de borrado bloquea la fila (por ejemplo, si `0011_publicaciones_borrado.sql` no se
 aplicó todavía contra el proyecto), PostgREST responde 200 sin ningún error aunque no haya borrado
 nada — por eso se chequea que `data` tenga al menos una fila para considerarlo un éxito real, y si no,
 se muestra un error visible y se revierte el borrado optimista en la UI (la fila no vuelve a
@@ -220,7 +226,9 @@ perfil público con feed de trabajos. Muestra la misma cabecera que `WorkerProfi
 nombre, `RubroChipsList.tsx`, calificación) más un botón "Editar perfil" y el estado de Premium
 (vigente o no, con acceso directo a `PremiumScreen.tsx`), y abajo todas las publicaciones propias en
 `PublicacionesGrid.tsx` — una cuadrícula de miniaturas cuadradas de 3 columnas, estilo Instagram,
-distinta del layout de tarjeta completa que usa el feed.
+distinta del layout de tarjeta completa que usa el feed. Cada miniatura tiene una "✕" arriba a la
+derecha para borrarla (con la misma confirmación de `ConfirmDialog.tsx`); es el único lugar de la
+pestaña de publicaciones donde un trabajador puede administrar sus propias fotos.
 
 `WorkersListScreen.tsx` y `PublicacionesFeedScreen.tsx` son rutas de un mismo stack navigator (no un
 tab navigator real), así que React Navigation las mantiene montadas de fondo — pero cada una tenía su

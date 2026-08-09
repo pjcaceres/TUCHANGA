@@ -3,12 +3,9 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import AppHeader from '../components/AppHeader';
-import ConfirmDialog from '../components/ConfirmDialog';
 import PublicacionCard from '../components/PublicacionCard';
 import { colors } from '../constants/theme';
-import { useAuth } from '../contexts/AuthContext';
 import { useMiPerfil } from '../contexts/ProfileContext';
-import { eliminarPublicacion } from '../lib/publicaciones';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
 import type { Publicacion } from '../types/database';
@@ -18,13 +15,10 @@ type Props = NativeStackScreenProps<AppStackParamList, 'PublicacionesFeed'>;
 type Autor = { nombre: string; fotoUrl: string | null };
 
 export default function PublicacionesFeedScreen({ navigation }: Props) {
-  const { session } = useAuth();
-  const userId = session?.user.id;
-
-  // Igual que en WorkersListScreen: "esTrabajador" sale del contexto
-  // compartido (no de un fetch propio de esta pantalla) para que no
-  // arranque en false cada vez que React Navigation vuelve a montarla al
-  // cambiar de pestaña, lo que hacía parpadear la pestaña "Mi Perfil".
+  // "esTrabajador" sale del contexto compartido (no de un fetch propio de
+  // esta pantalla) para que no arranque en false cada vez que React
+  // Navigation vuelve a montarla al cambiar de pestaña, lo que hacía
+  // parpadear la pestaña "Mi Perfil".
   const { perfil: miPerfil } = useMiPerfil();
   const esTrabajador = miPerfil?.tipo_usuario === 'trabajador';
 
@@ -32,8 +26,6 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
   const [autoresPorId, setAutoresPorId] = useState<Map<string, Autor>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [errorPublicacion, setErrorPublicacion] = useState<string | null>(null);
-  const [aBorrarId, setABorrarId] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -81,22 +73,6 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
     }, [])
   );
 
-  const confirmarBorrado = async () => {
-    const publicacionId = aBorrarId;
-    setABorrarId(null);
-    if (!publicacionId) return;
-
-    setErrorPublicacion(null);
-    const anteriores = publicaciones;
-    setPublicaciones((actuales) => actuales.filter((p) => p.id !== publicacionId));
-
-    const { error: deleteError } = await eliminarPublicacion(publicacionId);
-    if (deleteError) {
-      setPublicaciones(anteriores);
-      setErrorPublicacion(deleteError);
-    }
-  };
-
   return (
     <View style={styles.container}>
       <AppHeader
@@ -140,14 +116,8 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
           data={publicaciones}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          ListHeaderComponent={
-            errorPublicacion ? (
-              <Text style={[styles.errorText, styles.errorPublicacion]}>{errorPublicacion}</Text>
-            ) : null
-          }
           renderItem={({ item }) => {
             const autor = autoresPorId.get(item.trabajador_id);
-            const esPropia = item.trabajador_id === userId;
             return (
               <PublicacionCard
                 publicacion={item}
@@ -158,24 +128,12 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
                     nombre: autor?.nombre ?? 'Trabajador',
                   })
                 }
-                esPropia={esPropia}
-                onEliminar={esPropia ? () => setABorrarId(item.id) : undefined}
               />
             );
           }}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
       )}
-
-      <ConfirmDialog
-        visible={aBorrarId !== null}
-        titulo="Eliminar publicación"
-        mensaje="¿Estás seguro que querés eliminar esta publicación? Esta acción no se puede deshacer."
-        textoConfirmar="Eliminar"
-        destructivo
-        onConfirmar={confirmarBorrado}
-        onCancelar={() => setABorrarId(null)}
-      />
     </View>
   );
 }
@@ -216,9 +174,6 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.error,
     textAlign: 'center',
-  },
-  errorPublicacion: {
-    marginBottom: 12,
   },
   emptyText: {
     color: colors.textMuted,

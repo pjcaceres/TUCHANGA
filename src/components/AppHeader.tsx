@@ -1,7 +1,10 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { colors } from '../constants/theme';
+import { Image, StyleSheet, View } from 'react-native';
 import HeaderMenu from './HeaderMenu';
 import MainTabs, { type TabActiva } from './MainTabs';
+
+// Relación de aspecto real de assets/logo-header.png (768x670), recortado de
+// assets/LogoTuchangaPng.png para sacarle el margen transparente del glow.
+const LOGO_ASPECT_RATIO = 768 / 670;
 
 interface Props {
   activo: TabActiva;
@@ -27,7 +30,11 @@ export default function AppHeader({
   return (
     <View style={styles.container}>
       <View style={styles.topRow}>
-        <Text style={styles.title}>TuChanga</Text>
+        <Image
+          source={require('../../assets/logo-header.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <HeaderMenu
           esTrabajador={esTrabajador}
           onPremium={onPremium}
@@ -61,10 +68,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 12,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.primary,
+  logo: {
+    height: 36,
+    width: 36 * LOGO_ASPECT_RATIO,
   },
   tabsSection: {
     paddingHorizontal: 20,
