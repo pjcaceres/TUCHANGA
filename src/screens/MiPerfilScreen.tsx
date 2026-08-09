@@ -10,11 +10,12 @@ import RubroChipsList from '../components/RubroChipsList';
 import StarRating from '../components/StarRating';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { useLikes } from '../hooks/useLikes';
 import { esPremiumVigente } from '../lib/premium';
-import { eliminarPublicacion } from '../lib/publicaciones';
+import { eliminarPublicacion, obtenerFotosDePublicaciones } from '../lib/publicaciones';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
-import type { Profile, Publicacion } from '../types/database';
+import type { Profile, Publicacion, PublicacionFoto } from '../types/database';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'MiPerfil'>;
 
@@ -24,10 +25,16 @@ export default function MiPerfilScreen({ navigation }: Props) {
 
   const [perfil, setPerfil] = useState<Profile | null>(null);
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
+  const [fotosPorId, setFotosPorId] = useState<Map<string, PublicacionFoto[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorPublicacion, setErrorPublicacion] = useState<string | null>(null);
   const [aBorrarId, setABorrarId] = useState<string | null>(null);
+
+  const { conteos: conteosLikes, propios: misLikes, alternar: alternarLike } = useLikes(
+    publicaciones.map((p) => p.id),
+    userId
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -56,7 +63,9 @@ export default function MiPerfilScreen({ navigation }: Props) {
         }
 
         if (!publicacionesResult.error) {
-          setPublicaciones(publicacionesResult.data ?? []);
+          const lista = publicacionesResult.data ?? [];
+          setPublicaciones(lista);
+          setFotosPorId(await obtenerFotosDePublicaciones(lista.map((p) => p.id)));
         }
 
         setLoading(false);
@@ -147,7 +156,14 @@ export default function MiPerfilScreen({ navigation }: Props) {
                 Todavía no publicaste ninguna foto de trabajo.
               </Text>
             ) : (
-              <PublicacionesGrid publicaciones={publicaciones} onEliminar={setABorrarId} />
+              <PublicacionesGrid
+                publicaciones={publicaciones}
+                fotosPorId={fotosPorId}
+                likesPorId={conteosLikes}
+                misLikes={misLikes}
+                onToggleLike={alternarLike}
+                onEliminar={setABorrarId}
+              />
             )}
           </View>
         </ScrollView>

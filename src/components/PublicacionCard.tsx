@@ -1,7 +1,9 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../constants/theme';
-import type { Publicacion } from '../types/database';
+import type { Publicacion, PublicacionFoto } from '../types/database';
 import Avatar from './Avatar';
+import Carousel from './Carousel';
+import LikeButton from './LikeButton';
 
 interface Autor {
   nombre: string;
@@ -10,18 +12,26 @@ interface Autor {
 
 interface Props {
   publicacion: Publicacion;
+  fotos: PublicacionFoto[];
   autor?: Autor;
   onPressAutor?: () => void;
   esPropia?: boolean;
   onEliminar?: () => void;
+  likeado?: boolean;
+  cantidadLikes?: number;
+  onToggleLike?: () => void;
 }
 
 export default function PublicacionCard({
   publicacion,
+  fotos,
   autor,
   onPressAutor,
   esPropia,
   onEliminar,
+  likeado = false,
+  cantidadLikes = 0,
+  onToggleLike,
 }: Props) {
   return (
     <View style={styles.card}>
@@ -41,12 +51,17 @@ export default function PublicacionCard({
         </View>
       )}
 
-      <Image source={{ uri: publicacion.imagen_url }} style={styles.imagen} resizeMode="cover" />
+      <Carousel urls={fotos.map((f) => f.imagen_url)} />
 
       <View style={styles.info}>
         {publicacion.descripcion && <Text style={styles.descripcion}>{publicacion.descripcion}</Text>}
         <View style={styles.footerRow}>
-          <Text style={styles.fecha}>{formatearFecha(publicacion.created_at)}</Text>
+          <View style={styles.footerLeft}>
+            {onToggleLike && (
+              <LikeButton likeado={likeado} cantidad={cantidadLikes} onPress={onToggleLike} />
+            )}
+            <Text style={styles.fecha}>{formatearFecha(publicacion.created_at)}</Text>
+          </View>
           {esPropia && onEliminar && (
             <Pressable onPress={onEliminar} hitSlop={8}>
               <Text style={styles.eliminarTexto}>Eliminar</Text>
@@ -96,11 +111,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.primary,
   },
-  imagen: {
-    width: '100%',
-    aspectRatio: 4 / 5,
-    backgroundColor: colors.background,
-  },
   info: {
     padding: 12,
     gap: 6,
@@ -114,6 +124,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   fecha: {
     fontSize: 12,

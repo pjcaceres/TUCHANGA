@@ -14,10 +14,14 @@ import {
 } from 'react-native';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
-import { elegirFotoDeTrabajo, subirFotoDeTrabajo } from '../lib/publicaciones';
+import type { FotoElegida } from '../lib/avatar';
+import {
+  elegirFotosDeTrabajo,
+  MAX_FOTOS_POR_PUBLICACION,
+  subirFotosDeTrabajo,
+} from '../lib/publicaciones';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
-import type { FotoElegida } from '../lib/avatar';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'PublicarTrabajo'>;
 
@@ -27,45 +31,68 @@ export default function PublicarTrabajoScreen({ navigation }: Props) {
   const { session } = useAuth();
   const userId = session?.user.id;
 
-  const [foto, setFoto] = useState<FotoElegida | null>(null);
+  const [fotos, setFotos] = useState<FotoElegida[]>([]);
   const [descripcion, setDescripcion] = useState('');
   const [publicando, setPublicando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const elegirFoto = async () => {
-    const elegida = await elegirFotoDeTrabajo();
-    if (elegida) setFoto(elegida);
+  const agregarFotos = async () => {
+    const espacioDisponible = MAX_FOTOS_POR_PUBLICACION - fotos.length;
+    if (espacioDisponible <= 0) return;
+
+    const elegidas = await elegirFotosDeTrabajo(espacioDisponible);
+    if (elegidas.length > 0) {
+      setFotos((actuales) => [...actuales, ...elegidas].slice(0, MAX_FOTOS_POR_PUBLICACION));
+    }
+  };
+
+  const quitarFoto = (indice: number) => {
+    setFotos((actuales) => actuales.filter((_, i) => i !== indice));
   };
 
   const publicar = async () => {
     setError(null);
 
     if (!userId) return;
-    if (!foto) {
-      setError('Elegí una foto del trabajo que hiciste.');
+    if (fotos.length === 0) {
+      setError('Elegí al menos una foto del trabajo que hiciste.');
       return;
     }
 
     setPublicando(true);
 
-    const { url, error: uploadError } = await subirFotoDeTrabajo(userId, foto);
+    const { urls, error: uploadError } = await subirFotosDeTrabajo(userId, fotos);
 
-    if (uploadError || !url) {
+    if (uploadError || urls.length !== fotos.length) {
       setPublicando(false);
-      setError(uploadError ?? 'No pudimos subir la foto. Probá de nuevo.');
+      setError(uploadError ?? 'No pudimos subir las fotos. Probá de nuevo.');
       return;
     }
 
-    const { error: insertError } = await supabase.from('publicaciones').insert({
-      trabajador_id: userId,
-      imagen_url: url,
-      descripcion: descripcion.trim() || null,
-    });
+    const { data: publicacionCreada, error: insertError } = await supabase
+      .from('publicaciones')
+      .insert({ trabajador_id: userId, descripcion: descripcion.trim() || null })
+      .select('id')
+      .single();
+
+    if (insertError || !publicacionCreada) {
+      setPublicando(false);
+      setError(`No pudimos publicar el trabajo: ${insertError?.message ?? 'error desconocido'}`);
+      return;
+    }
+
+    const { error: fotosError } = await supabase.from('publicacion_fotos').insert(
+      urls.map((url, orden) => ({
+        publicacion_id: publicacionCreada.id,
+        imagen_url: url,
+        orden,
+      }))
+    );
 
     setPublicando(false);
 
-    if (insertError) {
-      setError(`No pudimos publicar el trabajo: ${insertError.message}`);
+    if (fotosError) {
+      setError(`No pudimos guardar las fotos: ${fotosError.message}`);
       return;
     }
 
@@ -76,19 +103,35 @@ export default function PublicarTrabajoScreen({ navigation }: Props) {
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.form}>
-          <Text style={styles.label}>Foto del trabajo</Text>
-          <Pressable style={styles.fotoBox} onPress={elegirFoto} disabled={publicando}>
-            {foto ? (
-              <Image source={{ uri: foto.uri }} style={styles.foto} resizeMode="cover" />
-            ) : (
-              <Text style={styles.fotoPlaceholder}>📷 Elegir foto</Text>
+          <Text style={styles.label}>
+            Fotos del trabajo ({fotos.length}/{MAX_FOTOS_POR_PUBLICACION})
+          </Text>
+
+          <View style={styles.fotosRow}>
+            {fotos.map((foto, indice) => (
+              <View key={foto.uri} style={styles.fotoBox}>
+                <Image source={{ uri: foto.uri }} style={styles.foto} resizeMode="cover" />
+                <Pressable
+                  style={styles.quitarFotoBadge}
+                  onPress={() => quitarFoto(indice)}
+                  disabled={publicando}
+                  hitSlop={6}
+                >
+                  <Text style={styles.quitarFotoBadgeTexto}>✕</Text>
+                </Pressable>
+              </View>
+            ))}
+
+            {fotos.length < MAX_FOTOS_POR_PUBLICACION && (
+              <Pressable
+                style={[styles.fotoBox, styles.agregarFotoBox]}
+                onPress={agregarFotos}
+                disabled={publicando}
+              >
+                <Text style={styles.agregarFotoTexto}>+ Agregar</Text>
+              </Pressable>
             )}
-          </Pressable>
-          {foto && (
-            <Pressable onPress={elegirFoto} disabled={publicando}>
-              <Text style={styles.cambiarFotoTexto}>Cambiar foto</Text>
-            </Pressable>
-          )}
+          </View>
 
           <Text style={styles.label}>Descripción (opcional)</Text>
           <TextInput
@@ -146,10 +189,14 @@ const styles = StyleSheet.create({
     marginTop: 14,
     marginBottom: 6,
   },
+  fotosRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   fotoBox: {
-    width: 140,
-    height: 105,
-    alignSelf: 'center',
+    width: 76,
+    height: 76,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
@@ -162,17 +209,30 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  fotoPlaceholder: {
-    fontSize: 13,
-    color: colors.textMuted,
-    textAlign: 'center',
+  quitarFotoBadge: {
+    position: 'absolute',
+    top: 3,
+    right: 3,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  cambiarFotoTexto: {
-    fontSize: 13,
+  quitarFotoBadgeTexto: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  agregarFotoBox: {
+    borderStyle: 'dashed',
+  },
+  agregarFotoTexto: {
+    fontSize: 12,
     fontWeight: '600',
     color: colors.primary,
-    marginTop: 8,
-    alignSelf: 'center',
+    textAlign: 'center',
   },
   input: {
     borderWidth: 1,

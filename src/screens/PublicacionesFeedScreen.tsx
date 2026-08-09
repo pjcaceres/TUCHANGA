@@ -5,16 +5,22 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from '
 import AppHeader from '../components/AppHeader';
 import PublicacionCard from '../components/PublicacionCard';
 import { colors } from '../constants/theme';
+import { useAuth } from '../contexts/AuthContext';
 import { useMiPerfil } from '../contexts/ProfileContext';
+import { useLikes } from '../hooks/useLikes';
+import { obtenerFotosDePublicaciones } from '../lib/publicaciones';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
-import type { Publicacion } from '../types/database';
+import type { Publicacion, PublicacionFoto } from '../types/database';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'PublicacionesFeed'>;
 
 type Autor = { nombre: string; fotoUrl: string | null };
 
 export default function PublicacionesFeedScreen({ navigation }: Props) {
+  const { session } = useAuth();
+  const userId = session?.user.id;
+
   // "esTrabajador" sale del contexto compartido (no de un fetch propio de
   // esta pantalla) para que no arranque en false cada vez que React
   // Navigation vuelve a montarla al cambiar de pestaña, lo que hacía
@@ -24,8 +30,14 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
 
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
   const [autoresPorId, setAutoresPorId] = useState<Map<string, Autor>>(new Map());
+  const [fotosPorId, setFotosPorId] = useState<Map<string, PublicacionFoto[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { conteos: conteosLikes, propios: misLikes, alternar: alternarLike } = useLikes(
+    publicaciones.map((p) => p.id),
+    userId
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -53,15 +65,19 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
         setPublicaciones(lista);
 
         const autorIds = Array.from(new Set(lista.map((p) => p.trabajador_id)));
-        const { data: perfiles } = autorIds.length
-          ? await supabase.from('profiles').select('id, nombre, foto_url').in('id', autorIds)
-          : { data: [] };
+        const [{ data: perfiles }, fotos] = await Promise.all([
+          autorIds.length
+            ? supabase.from('profiles').select('id, nombre, foto_url').in('id', autorIds)
+            : Promise.resolve({ data: [] }),
+          obtenerFotosDePublicaciones(lista.map((p) => p.id)),
+        ]);
 
         if (cancelado) return;
 
         setAutoresPorId(
           new Map((perfiles ?? []).map((p) => [p.id, { nombre: p.nombre, fotoUrl: p.foto_url }]))
         );
+        setFotosPorId(fotos);
         setLoading(false);
       }
 
@@ -122,6 +138,7 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
             return (
               <PublicacionCard
                 publicacion={item}
+                fotos={fotosPorId.get(item.id) ?? []}
                 autor={autor}
                 onPressAutor={() =>
                   navigation.navigate('WorkerProfile', {
@@ -129,6 +146,9 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
                     nombre: autor?.nombre ?? 'Trabajador',
                   })
                 }
+                likeado={misLikes.has(item.id)}
+                cantidadLikes={conteosLikes.get(item.id) ?? 0}
+                onToggleLike={() => alternarLike(item.id)}
               />
             );
           }}

@@ -9,12 +9,13 @@ import RubroChipsList from '../components/RubroChipsList';
 import StarRating from '../components/StarRating';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { useLikes } from '../hooks/useLikes';
 import { haContactadoAlTrabajador, obtenerOCrearConversacion } from '../lib/chat';
 import { esPremiumVigente } from '../lib/premium';
-import { eliminarPublicacion } from '../lib/publicaciones';
+import { eliminarPublicacion, obtenerFotosDePublicaciones } from '../lib/publicaciones';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
-import type { Profile, Publicacion, Resena } from '../types/database';
+import type { Profile, Publicacion, PublicacionFoto, Resena } from '../types/database';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'WorkerProfile'>;
 
@@ -25,6 +26,7 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
   const [trabajador, setTrabajador] = useState<Profile | null>(null);
   const [resenas, setResenas] = useState<Resena[]>([]);
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
+  const [fotosPorId, setFotosPorId] = useState<Map<string, PublicacionFoto[]>>(new Map());
   const [esCliente, setEsCliente] = useState(false);
   const [haContactado, setHaContactado] = useState(false);
   const [contactando, setContactando] = useState(false);
@@ -32,6 +34,11 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [errorPublicacion, setErrorPublicacion] = useState<string | null>(null);
   const [aBorrarId, setABorrarId] = useState<string | null>(null);
+
+  const { conteos: conteosLikes, propios: misLikes, alternar: alternarLike } = useLikes(
+    publicaciones.map((p) => p.id),
+    session?.user.id
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -72,7 +79,9 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
         }
 
         if (!publicacionesResult.error) {
-          setPublicaciones(publicacionesResult.data ?? []);
+          const lista = publicacionesResult.data ?? [];
+          setPublicaciones(lista);
+          setFotosPorId(await obtenerFotosDePublicaciones(lista.map((p) => p.id)));
         }
 
         const clienteConfirmado = miPerfilResult.data?.tipo_usuario === 'cliente';
@@ -229,8 +238,12 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
                 <PublicacionCard
                   key={publicacion.id}
                   publicacion={publicacion}
+                  fotos={fotosPorId.get(publicacion.id) ?? []}
                   esPropia={!esOtroUsuario}
                   onEliminar={!esOtroUsuario ? () => setABorrarId(publicacion.id) : undefined}
+                  likeado={misLikes.has(publicacion.id)}
+                  cantidadLikes={conteosLikes.get(publicacion.id) ?? 0}
+                  onToggleLike={() => alternarLike(publicacion.id)}
                 />
               ))}
             </View>

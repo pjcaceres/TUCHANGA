@@ -1,29 +1,63 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../constants/theme';
-import type { Publicacion } from '../types/database';
+import type { Publicacion, PublicacionFoto } from '../types/database';
+import LikeButton from './LikeButton';
 
 interface Props {
   publicaciones: Publicacion[];
+  fotosPorId: Map<string, PublicacionFoto[]>;
+  likesPorId?: Map<string, number>;
+  misLikes?: Set<string>;
+  onToggleLike?: (publicacionId: string) => void;
   onEliminar?: (publicacionId: string) => void;
 }
 
-export default function PublicacionesGrid({ publicaciones, onEliminar }: Props) {
+export default function PublicacionesGrid({
+  publicaciones,
+  fotosPorId,
+  likesPorId,
+  misLikes,
+  onToggleLike,
+  onEliminar,
+}: Props) {
   return (
     <View style={styles.grid}>
-      {publicaciones.map((publicacion) => (
-        <View key={publicacion.id} style={styles.celdaWrap}>
-          <Image source={{ uri: publicacion.imagen_url }} style={styles.celda} resizeMode="cover" />
-          {onEliminar && (
-            <Pressable
-              style={styles.eliminarBadge}
-              onPress={() => onEliminar(publicacion.id)}
-              hitSlop={6}
-            >
-              <Text style={styles.eliminarBadgeTexto}>✕</Text>
-            </Pressable>
-          )}
-        </View>
-      ))}
+      {publicaciones.map((publicacion) => {
+        const fotos = fotosPorId.get(publicacion.id) ?? [];
+        const primeraFoto = fotos[0]?.imagen_url;
+
+        return (
+          <View key={publicacion.id} style={styles.celdaWrap}>
+            {primeraFoto && (
+              <Image source={{ uri: primeraFoto }} style={styles.celda} resizeMode="cover" />
+            )}
+            {fotos.length > 1 && (
+              <View style={styles.multiFotoBadge}>
+                <Text style={styles.multiFotoBadgeTexto}>🖼 {fotos.length}</Text>
+              </View>
+            )}
+            {onToggleLike && (
+              <View style={styles.likeBadge}>
+                <LikeButton
+                  likeado={misLikes?.has(publicacion.id) ?? false}
+                  cantidad={likesPorId?.get(publicacion.id) ?? 0}
+                  onPress={() => onToggleLike(publicacion.id)}
+                  chico
+                />
+              </View>
+            )}
+            {onEliminar && (
+              <Pressable
+                style={styles.eliminarBadge}
+                onPress={() => onEliminar(publicacion.id)}
+                hitSlop={6}
+              >
+                <Text style={styles.eliminarBadgeTexto}>✕</Text>
+              </Pressable>
+            )}
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -44,6 +78,29 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 4,
     backgroundColor: colors.background,
+  },
+  multiFotoBadge: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  multiFotoBadgeTexto: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  likeBadge: {
+    position: 'absolute',
+    bottom: 4,
+    left: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.55)',
   },
   eliminarBadge: {
     position: 'absolute',

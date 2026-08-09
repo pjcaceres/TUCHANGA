@@ -30,8 +30,10 @@ src/
     MainTabs.tsx              Pestañas "Trabajadores" / "Publicaciones" / "Mi Perfil" (esta última solo trabajador)
     AppHeader.tsx             Header compartido (logo + HeaderMenu + MainTabs) para que no cambie entre pestañas
     HeaderMenu.tsx            Menú "⋮" desplegable con Premium (solo trabajador) / Mis chats / Configuración
-    PublicacionCard.tsx       Tarjeta de una publicación del feed: foto, autor opcional, descripción y fecha
-    PublicacionesGrid.tsx     Cuadrícula estilo Instagram de miniaturas (usada en Mi Perfil)
+    PublicacionCard.tsx       Tarjeta de una publicación del feed: carrusel de fotos, autor opcional, descripción, likes y fecha
+    PublicacionesGrid.tsx     Cuadrícula estilo Instagram de miniaturas (usada en Mi Perfil), con badge de "varias fotos" y de likes
+    Carousel.tsx              Carrusel deslizable de fotos con puntitos indicadores (usado dentro de PublicacionCard)
+    LikeButton.tsx            Botón de "me gusta" (corazón) + contador, con variante chica para el grid
     ConfirmDialog.tsx         Modal de confirmación genérico (usado para borrar una publicación)
   constants/
     rubros.ts                Lista de rubros/oficios del MVP
@@ -43,6 +45,8 @@ src/
   contexts/
     AuthContext.tsx          Sesión de Supabase Auth disponible en toda la app
     ProfileContext.tsx        Cachea el propio perfil (profiles) a nivel app, para que no se resetee al cambiar de pestaña
+  hooks/
+    useLikes.ts                Estado de likes (conteo + "¿ya likeé esto?") con toggle optimista, para el feed/perfil/grid
   lib/
     supabase.ts              Cliente de Supabase (usa variables de entorno EXPO_PUBLIC_*)
     geo.ts                    Distancia entre dos coordenadas (fórmula haversine)
@@ -51,7 +55,8 @@ src/
     markdown.ts                 Parser markdown minimalista (headings, negrita, listas, itálica)
     chat.ts                     Obtener/crear conversación y chequear si un cliente ya contactó a un trabajador
     avatar.ts                   Elegir una foto y subirla al bucket "avatars" de Storage
-    publicaciones.ts            Elegir una foto de trabajo y subirla al bucket "publicaciones-fotos"
+    publicaciones.ts            Elegir/subir hasta 6 fotos de trabajo, borrar una publicación, traer las fotos de varias
+    likes.ts                    Traer los likes de varias publicaciones, dar/quitar el propio
   navigation/
     RootNavigator.tsx         Cambia entre stack de auth y stack de la app según la sesión
     types.ts                  Param lists de cada stack
@@ -87,6 +92,8 @@ supabase/
     0009_rubros_multiples.sql   Reemplaza `rubro` (uno) por `rubros` (array) + migra los datos existentes
     0010_publicaciones.sql      Tabla `publicaciones` (feed de trabajos) + bucket público "publicaciones-fotos"
     0011_publicaciones_borrado.sql  Política RLS para que un trabajador borre sus propias publicaciones
+    0012_publicacion_fotos.sql  Tabla `publicacion_fotos` (varias fotos por publicación, límite 6) + migra `imagen_url` existente
+    0013_publicacion_likes.sql  Tabla `publicacion_likes` ("me gusta" único por usuario y publicación)
   seed.sql                    Trabajadores ficticios de prueba repartidos en varios departamentos
   functions/
     generar-perfil/           Edge Function: arma rubros/descripción/departamento con Claude (Anthropic)
@@ -109,6 +116,8 @@ supabase/
    - `supabase/migrations/0009_rubros_multiples.sql`
    - `supabase/migrations/0010_publicaciones.sql`
    - `supabase/migrations/0011_publicaciones_borrado.sql`
+   - `supabase/migrations/0012_publicacion_fotos.sql`
+   - `supabase/migrations/0013_publicacion_likes.sql`
    - `supabase/seed.sql` (opcional, carga trabajadores de prueba para ver el listado funcionando)
 3. Desplegá la Edge Function `generar-perfil` y configurá su secreto (ver sección siguiente).
 4. Instalá dependencias y arrancá la app:
@@ -177,9 +186,10 @@ Premium/Mis chats/Configuración, ver más abajo) y `MainTabs.tsx` en un solo co
 `WorkersListScreen.tsx`, `PublicacionesFeedScreen.tsx` y `MiPerfilScreen.tsx`, para que cambiar de
 pestaña nunca haga desaparecer esos accesos.
 
-`publicaciones` (`0010_publicaciones.sql`) tiene `trabajador_id`, `imagen_url`, `descripcion`
-(opcional) y `created_at`. Cualquier usuario autenticado puede leer el feed completo (política de
-`select` abierta, como `profiles`); solo puede insertar o borrar una fila el propio trabajador dueño
+`publicaciones` (`0010_publicaciones.sql`) tiene `trabajador_id`, `descripcion` (opcional) y
+`created_at` — las fotos viven en una tabla aparte, ver la sección "Varias fotos por publicación"
+más abajo. Cualquier usuario autenticado puede leer el feed completo (política de `select` abierta,
+como `profiles`); solo puede insertar o borrar una fila el propio trabajador dueño
 (`trabajador_id = auth.uid()`, y para insertar además su perfil debe ser de tipo `trabajador` —
 `0011_publicaciones_borrado.sql` agrega la política de borrado). Las fotos viven en el bucket público
 "publicaciones-fotos", con las mismas reglas que "avatars": lectura pública, escritura sólo en la
@@ -189,17 +199,17 @@ carpeta `<user_id>/...` de quien sube, y sólo si es una cuenta trabajador.
 otra etapa) y resuelve el nombre/foto de cada autor con una consulta aparte a `profiles` (mismo
 patrón que `MisChatsScreen.tsx`, no hay relaciones anidadas vía PostgREST). El botón "+ Publicar un
 trabajo" sólo se muestra si el perfil logueado es de tipo `trabajador`, y lleva a
-`PublicarTrabajoScreen.tsx` (elegir foto + descripción, sube con `lib/publicaciones.ts` y crea la
+`PublicarTrabajoScreen.tsx` (elegir fotos + descripción, sube con `lib/publicaciones.ts` y crea la
 fila). `WorkerProfileScreen.tsx` reutiliza `PublicacionCard.tsx` sin el bloque de autor para mostrar,
 en una sección "Trabajos publicados", sólo las fotos de ese trabajador.
 
-`PublicacionCard.tsx` tiene la foto ocupando el ancho completo de la tarjeta (relación 4:5, estilo
-Instagram) con el autor arriba y la descripción/fecha abajo — ni un cuadradito chico ni una foto a
-pantalla completa. En el feed (`PublicacionesFeedScreen.tsx`) se ve igual para todos, sin ningún
-control especial aunque la publicación sea propia — administrar (borrar) las propias publicaciones
-se hace desde "Mi Perfil" (ver más abajo), no desde el feed. `WorkerProfileScreen.tsx` sí sigue
-pasándole `esPropia`/`onEliminar` cuando el propio trabajador ve su perfil público, mostrando "Tu
-publicación" y un botón "Eliminar" ahí.
+`PublicacionCard.tsx` tiene las fotos (una o varias, ver más abajo) ocupando el ancho completo de la
+tarjeta (relación 4:5, estilo Instagram) con el autor arriba y la descripción/fecha/likes abajo — ni
+un cuadradito chico ni una foto a pantalla completa. En el feed (`PublicacionesFeedScreen.tsx`) se ve
+igual para todos, sin ningún control de borrado especial aunque la publicación sea propia —
+administrar (borrar) las propias publicaciones se hace desde "Mi Perfil" (ver más abajo), no desde
+el feed. `WorkerProfileScreen.tsx` sí sigue pasándole `esPropia`/`onEliminar` cuando el propio
+trabajador ve su perfil público, mostrando "Tu publicación" y un botón "Eliminar" ahí.
 
 Borrar (desde donde sea) abre `ConfirmDialog.tsx` (un `Modal` propio, no `Alert.alert` de React
 Native — en react-native-web esa API es un no-op y no muestra nada) para confirmar antes. Al
@@ -209,6 +219,50 @@ aplicó todavía contra el proyecto), PostgREST responde 200 sin ningún error a
 nada — por eso se chequea que `data` tenga al menos una fila para considerarlo un éxito real, y si no,
 se muestra un error visible y se revierte el borrado optimista en la UI (la fila no vuelve a
 aparecer sola después de recargar por error, como pasaba antes de este chequeo).
+
+## Varias fotos por publicación (carrusel)
+
+Una publicación ya no tiene una sola foto: `publicacion_fotos` (`0012_publicacion_fotos.sql`) guarda
+`publicacion_id`, `imagen_url` y `orden`, con hasta 6 filas por publicación. El límite se refuerza en
+el propio Postgres (no solo en la UI): un trigger `before insert` cuenta las fotos que ya tiene esa
+publicación y rechaza la fila si ya llegó a 6 — como corre fila por fila dentro de la misma
+transacción, también funciona si se insertan varias de una sola vez. Las publicaciones que ya
+existían (con la vieja columna `publicaciones.imagen_url`) se migran automáticamente a esta tabla
+nueva como su primera foto (`orden = 0`) antes de borrar esa columna, así que no perdieron nada.
+
+En "Publicar un trabajo" (`PublicarTrabajoScreen.tsx`), `elegirFotosDeTrabajo()` en
+`lib/publicaciones.ts` abre el picker con `allowsMultipleSelection` — se pueden elegir varias fotos
+de una sola vez, o ir tocando "+ Agregar" para sumar más hasta llegar a 6 (el contador "X/6" se
+actualiza en cada paso, y cada foto elegida se puede sacar individualmente antes de publicar). En
+web, `selectionLimit` no lo aplica el navegador (el picker nativo del sistema no tiene tope), así
+que el límite también se recorta en el cliente para que valga en todas las plataformas. Al publicar,
+`subirFotosDeTrabajo()` sube cada foto en orden (no en paralelo, para no perder el orden ni saturar
+la conexión) y después se insertan todas las filas de `publicacion_fotos` de una vez.
+
+`Carousel.tsx` es el componente que muestra esas fotos dentro de `PublicacionCard.tsx`: un
+`ScrollView` horizontal con paginado y puntitos indicadores abajo (solo si hay más de una foto). El
+ancho de cada foto se mide con `onLayout` para que ocupe el ancho real de la tarjeta en cualquier
+pantalla. En la cuadrícula de "Mis publicaciones" (`PublicacionesGrid.tsx`), en cambio, cada
+miniatura sigue siendo una sola foto (la primera, `orden = 0`) — ahí no hay espacio ni necesidad de
+un carrusel deslizable, así que si tiene más de una foto se muestra un badge chico "🖼 N" en la
+esquina, al estilo de cómo Instagram marca los posts de varias fotos en su propia cuadrícula.
+
+## Me gusta en publicaciones
+
+`publicacion_likes` (`0013_publicacion_likes.sql`) tiene `publicacion_id` y `usuario_id`, con un
+`unique (publicacion_id, usuario_id)` — eso es lo que hace que dar like sea, literalmente, un
+`insert`, y sacarlo sea un `delete`: la restricción única es la que garantiza "una vez por usuario
+por publicación", no una validación aparte. Cualquier usuario logueado (cliente o trabajador) puede
+dar like a cualquier publicación.
+
+`hooks/useLikes.ts` centraliza el estado de likes (usado igual en el feed, en el perfil de un
+trabajador y en la cuadrícula de "Mi Perfil"): trae de una sola consulta los likes de todas las
+publicaciones visibles, calcula el conteo de cada una y si el propio usuario ya la likeó, y expone
+un `alternar()` que cambia la UI al toque (optimista) antes de que responda el servidor. Si el
+pedido falla, revierte ese cambio — igual que con el borrado de una publicación, `quitarLike()` en
+`lib/likes.ts` chequea que el `.delete().select('id')` haya devuelto una fila antes de darlo por
+bueno, para no confundir "la política RLS bloqueó el borrado" con "se sacó el like de verdad".
+`LikeButton.tsx` (corazón 🤍/❤️ + contador) tiene una variante chica para el badge de la cuadrícula.
 
 ## Mi Perfil y el menú "⋮" del header
 

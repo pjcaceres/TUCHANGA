@@ -52,8 +52,22 @@ export type Mensaje = {
 export type Publicacion = {
   id: string;
   trabajador_id: string;
-  imagen_url: string;
   descripcion: string | null;
+  created_at: string;
+};
+
+export type PublicacionFoto = {
+  id: string;
+  publicacion_id: string;
+  imagen_url: string;
+  orden: number;
+  created_at: string;
+};
+
+export type PublicacionLike = {
+  id: string;
+  publicacion_id: string;
+  usuario_id: string;
   created_at: string;
 };
 
@@ -94,8 +108,20 @@ export type Database = {
       };
       publicaciones: {
         Row: Publicacion;
-        Insert: Partial<Publicacion> & { trabajador_id: string; imagen_url: string };
+        Insert: Partial<Publicacion> & { trabajador_id: string };
         Update: Partial<Publicacion>;
+        Relationships: [];
+      };
+      publicacion_fotos: {
+        Row: PublicacionFoto;
+        Insert: Partial<PublicacionFoto> & { publicacion_id: string; imagen_url: string };
+        Update: Partial<PublicacionFoto>;
+        Relationships: [];
+      };
+      publicacion_likes: {
+        Row: PublicacionLike;
+        Insert: Partial<PublicacionLike> & { publicacion_id: string; usuario_id: string };
+        Update: Partial<PublicacionLike>;
         Relationships: [];
       };
     };
