@@ -6,6 +6,7 @@ export type TabActiva = 'trabajadores' | 'publicaciones' | 'miPerfil';
 interface Props {
   activo: TabActiva;
   esTrabajador: boolean;
+  cargando?: boolean;
   onTrabajadores: () => void;
   onPublicaciones: () => void;
   onMiPerfil?: () => void;
@@ -14,10 +15,24 @@ interface Props {
 export default function MainTabs({
   activo,
   esTrabajador,
+  cargando,
   onTrabajadores,
   onPublicaciones,
   onMiPerfil,
 }: Props) {
+  // Mientras no sabemos todavía si el usuario es trabajador (primera carga
+  // del ProfileContext, por ejemplo justo después de un F5), no mostramos ni
+  // ocultamos la pestaña "Mi Perfil" a las apuradas — eso es lo que hacía
+  // parpadear el segmented control. En cambio, mostramos un placeholder
+  // estable del mismo alto hasta que se resuelve.
+  if (cargando) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.skeleton} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Pressable
@@ -75,5 +90,11 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: '#fff',
+  },
+  skeleton: {
+    flex: 1,
+    height: 36,
+    borderRadius: 9,
+    backgroundColor: colors.border,
   },
 });

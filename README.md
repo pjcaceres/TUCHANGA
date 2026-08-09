@@ -170,9 +170,10 @@ La parte "red social" de la app: cada trabajador puede publicar fotos de changas
 descripción corta opcional, y todos los usuarios (trabajador o cliente) ven ese feed en una pestaña
 nueva. `MainTabs.tsx` alterna entre "🔨 Trabajadores" (el listado de siempre), "📸 Publicaciones" (el
 feed) y, sólo para cuentas trabajador, "👤 Mi Perfil" — es un segmented control liviano sobre el stack
-navigator existente, sin agregar una librería de bottom-tabs. `AppHeader.tsx` agrupa el logo (ver
-`assets/logo-header.png` más abajo), `HeaderMenu.tsx` (el ícono "⋮" con Premium/Mis chats/
-Configuración, ver más abajo) y `MainTabs.tsx` en un solo componente que usan
+navigator existente, sin agregar una librería de bottom-tabs. `AppHeader.tsx` agrupa el logo (64px de
+alto, centrado arriba de todo — el logo principal de la app, no un ícono chico al lado del menú; ver
+`assets/logo-header.png` más abajo), `HeaderMenu.tsx` (el ícono "⋮" posicionado en la esquina, con
+Premium/Mis chats/Configuración, ver más abajo) y `MainTabs.tsx` en un solo componente que usan
 `WorkersListScreen.tsx`, `PublicacionesFeedScreen.tsx` y `MiPerfilScreen.tsx`, para que cambiar de
 pestaña nunca haga desaparecer esos accesos.
 
@@ -241,6 +242,24 @@ fetch para saber que el usuario es trabajador). La solución fue sacar ese dato 
 que las pantallas siguen llamando al enfocarse, para que el estado de Premium se mantenga al día), así
 que `tipo_usuario` — que nunca cambia durante la sesión — está disponible de entrada sin importar
 cuántas veces React Navigation vuelva a montar la pantalla.
+
+Ese contexto por sí solo no alcanza para una recarga completa de página (F5): ahí `ProfileContext`
+tiene que resolver todo desde cero, igual que al abrir la app por primera vez. Hay dos partes de ese
+arranque que hay que cuidar:
+
+- **`MainTabs.tsx` recibe una prop `cargando`** (de `ProfileContext.cargando`, reenviada por
+  `AppHeader.tsx`) y, mientras esté en `true`, muestra un placeholder gris del mismo alto que el
+  segmented control en vez de decidir a las apuradas si hay que mostrar 2 o 3 pestañas — así el
+  cambio de "no sé todavía" a "esta cuenta es trabajador/cliente" pasa una sola vez, prolijo, en vez
+  de un salto brusco.
+- **`ProfileContext.tsx` espera a que `AuthContext.loading` termine** antes de decidir nada. Sin ese
+  chequeo, justo después de un F5 `session` vale `null` por un instante (todavía no se resolvió
+  `supabase.auth.getSession()`), indistinguible de "no hay usuario logueado" — el contexto tomaba esa
+  ausencia momentánea como definitiva, resolvía `cargando=false` con `perfil=null`, y un instante
+  después, apenas aparecía la sesión real, volvía a `cargando=true` para recién ahí buscar el perfil
+  de verdad. Ese doble salto (cargando→no cargando→cargando de nuevo) era el parpadeo real detrás de
+  la recarga completa; esperar a que `AuthContext` termine de resolver la sesión antes de tocar
+  `cargando` lo elimina de raíz.
 
 ## Perfil de trabajador generado por IA
 

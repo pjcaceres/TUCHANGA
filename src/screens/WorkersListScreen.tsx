@@ -56,7 +56,7 @@ export default function WorkersListScreen({ navigation }: Props) {
   // lo que hacía parpadear elementos condicionados a "esTrabajador" (como la
   // pestaña "Mi Perfil"). Igual se refresca al enfocar, para que el estado
   // de Premium (que sí cambia con el tiempo) se mantenga al día.
-  const { perfil: miPerfil, refrescar: refrescarMiPerfil } = useMiPerfil();
+  const { perfil: miPerfil, cargando: cargandoMiPerfil, refrescar: refrescarMiPerfil } = useMiPerfil();
   const esTrabajador = miPerfil?.tipo_usuario === 'trabajador';
 
   useFocusEffect(
@@ -181,6 +181,7 @@ export default function WorkersListScreen({ navigation }: Props) {
       <AppHeader
         activo="trabajadores"
         esTrabajador={esTrabajador}
+        cargando={cargandoMiPerfil}
         onTrabajadores={() => {}}
         onPublicaciones={() => navigation.navigate('PublicacionesFeed')}
         onMiPerfil={() => navigation.navigate('MiPerfil')}

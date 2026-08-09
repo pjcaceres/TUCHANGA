@@ -5,10 +5,12 @@ import MainTabs, { type TabActiva } from './MainTabs';
 // Relación de aspecto real de assets/logo-header.png (768x670), recortado de
 // assets/LogoTuchangaPng.png para sacarle el margen transparente del glow.
 const LOGO_ASPECT_RATIO = 768 / 670;
+const LOGO_HEIGHT = 64;
 
 interface Props {
   activo: TabActiva;
   esTrabajador: boolean;
+  cargando?: boolean;
   onTrabajadores: () => void;
   onPublicaciones: () => void;
   onMiPerfil?: () => void;
@@ -20,6 +22,7 @@ interface Props {
 export default function AppHeader({
   activo,
   esTrabajador,
+  cargando,
   onTrabajadores,
   onPublicaciones,
   onMiPerfil,
@@ -35,18 +38,21 @@ export default function AppHeader({
           style={styles.logo}
           resizeMode="contain"
         />
-        <HeaderMenu
-          esTrabajador={esTrabajador}
-          onPremium={onPremium}
-          onMisChats={onMisChats}
-          onConfiguracion={onConfiguracion}
-        />
+        <View style={styles.menuButton}>
+          <HeaderMenu
+            esTrabajador={esTrabajador}
+            onPremium={onPremium}
+            onMisChats={onMisChats}
+            onConfiguracion={onConfiguracion}
+          />
+        </View>
       </View>
 
       <View style={styles.tabsSection}>
         <MainTabs
           activo={activo}
           esTrabajador={esTrabajador}
+          cargando={cargando}
           onTrabajadores={onTrabajadores}
           onPublicaciones={onPublicaciones}
           onMiPerfil={onMiPerfil}
@@ -62,15 +68,22 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    position: 'relative',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingBottom: 8,
   },
   logo: {
-    height: 36,
-    width: 36 * LOGO_ASPECT_RATIO,
+    height: LOGO_HEIGHT,
+    width: LOGO_HEIGHT * LOGO_ASPECT_RATIO,
+  },
+  menuButton: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: 20,
+    justifyContent: 'center',
   },
   tabsSection: {
     paddingHorizontal: 20,

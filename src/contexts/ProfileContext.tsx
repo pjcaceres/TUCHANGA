@@ -30,7 +30,7 @@ const ProfileContext = createContext<ProfileContextValue | undefined>(undefined)
  * "Mi Perfil") parpadearían.
  */
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const { session } = useAuth();
+  const { session, loading: cargandoSesion } = useAuth();
   const userId = session?.user.id;
 
   const [perfil, setPerfil] = useState<Profile | null>(null);
@@ -55,10 +55,19 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     setCargando(false);
   }, [userId]);
 
+  // Mientras AuthContext todavía no determinó si hay sesión (justo después
+  // de un F5, antes de que se resuelva supabase.auth.getSession()), "session"
+  // vale null igual que si estuviera deslogueado — sin este chequeo,
+  // refrescar() tomaba esa ausencia momentánea como "no hay usuario" y
+  // resolvía cargando=false con perfil=null, para un instante después volver
+  // a cargando=true apenas la sesión real aparecía. Ese doble salto era
+  // exactamente el parpadeo que se veía al recargar la página.
   useEffect(() => {
+    if (cargandoSesion) return;
+
     setCargando(true);
     refrescar();
-  }, [refrescar]);
+  }, [cargandoSesion, refrescar]);
 
   const value = useMemo(() => ({ perfil, cargando, refrescar }), [perfil, cargando, refrescar]);
 

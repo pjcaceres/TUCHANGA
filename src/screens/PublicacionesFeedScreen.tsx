@@ -19,7 +19,7 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
   // esta pantalla) para que no arranque en false cada vez que React
   // Navigation vuelve a montarla al cambiar de pestaña, lo que hacía
   // parpadear la pestaña "Mi Perfil".
-  const { perfil: miPerfil } = useMiPerfil();
+  const { perfil: miPerfil, cargando: cargandoMiPerfil } = useMiPerfil();
   const esTrabajador = miPerfil?.tipo_usuario === 'trabajador';
 
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
@@ -78,6 +78,7 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
       <AppHeader
         activo="publicaciones"
         esTrabajador={esTrabajador}
+        cargando={cargandoMiPerfil}
         onTrabajadores={() => navigation.navigate('WorkersList')}
         onPublicaciones={() => {}}
         onMiPerfil={() => navigation.navigate('MiPerfil')}
