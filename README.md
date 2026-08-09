@@ -64,7 +64,7 @@ src/
     LoginScreen.tsx
     RegisterScreen.tsx        Registro con selección de rol (trabajador/cliente), rubros (selección múltiple)/departamento por selector, validaciones y aceptación de términos
     WorkersListScreen.tsx      Listado de trabajadores: filtro por departamento + rubro, premium primero, ordenado por cercanía
-    WorkerProfileScreen.tsx    Perfil completo: descripción, historial de trabajos, reseñas, botón "Contactar" y "Dejar reseña" (habilitado solo si ya lo contactó)
+    WorkerProfileScreen.tsx    Perfil completo: descripción, calificación con estrellas, publicaciones, botón "Contactar" y "Dejar reseña" (habilitado solo si ya lo contactó)
     PremiumScreen.tsx          Activar/renovar el plan premium (visibilidad + insignia) del propio perfil
     DejarResenaScreen.tsx      Formulario de reseña (estrellas + trabajo realizado + comentario) para clientes
     ConfiguracionScreen.tsx    Acceso a Editar perfil, Términos, Privacidad y Cerrar sesión
@@ -465,7 +465,10 @@ elegir), qué trabajo le realizó y un comentario opcional. Al guardar se insert
 `resenas` asociada al trabajador y al cliente autenticado (`cliente_id = auth.uid()`, forzado por
 RLS para que nadie pueda dejar una reseña en nombre de otro), el trigger existente recalcula
 `calificacion_promedio` / `cantidad_resenas` del trabajador, y al volver a su perfil
-(`useFocusEffect`) la reseña nueva ya aparece en el historial.
+(`useFocusEffect`) la nueva calificación ya se refleja en las estrellas de arriba.
+`WorkerProfileScreen.tsx` no lista las reseñas una por una (esa sección, "Historial de trabajos",
+se sacó porque las publicaciones ya muestran el trabajo hecho con fotos) — solo la calificación
+promedio agregada, arriba del perfil.
 
 ## Términos y Condiciones / Política de Privacidad
 
@@ -492,8 +495,8 @@ hay build step que los sincronice automáticamente).
       departamento por selector (no texto libre) y validación de teléfono
 - [x] Listado de trabajadores por departamento (detección por GPS + selección manual) y rubro,
       ordenado por cercanía real (lat/lng)
-- [x] Perfil completo del trabajador con descripción, historial de trabajos y reseñas
-- [x] Reseñas e historial de trabajos (calificación promedio se actualiza sola con un trigger)
+- [x] Perfil completo del trabajador con descripción, calificación con estrellas y publicaciones
+- [x] Reseñas de clientes (calificación promedio se actualiza sola con un trigger)
 - [x] Los clientes pueden dejar reseñas desde el perfil del trabajador, solo si ya lo contactaron por chat
 - [x] Chat interno entre cliente y trabajador con Supabase Realtime, y pantalla "Mis chats"
 - [x] Términos y Condiciones / Política de Privacidad integrados, con aceptación obligatoria al registrarse

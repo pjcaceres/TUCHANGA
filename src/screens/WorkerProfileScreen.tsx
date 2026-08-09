@@ -15,7 +15,7 @@ import { esPremiumVigente } from '../lib/premium';
 import { eliminarPublicacion, obtenerFotosDePublicaciones } from '../lib/publicaciones';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
-import type { Profile, Publicacion, PublicacionFoto, Resena } from '../types/database';
+import type { Profile, Publicacion, PublicacionFoto } from '../types/database';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'WorkerProfile'>;
 
@@ -24,7 +24,6 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
   const { session } = useAuth();
 
   const [trabajador, setTrabajador] = useState<Profile | null>(null);
-  const [resenas, setResenas] = useState<Resena[]>([]);
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
   const [fotosPorId, setFotosPorId] = useState<Map<string, PublicacionFoto[]>>(new Map());
   const [esCliente, setEsCliente] = useState(false);
@@ -49,13 +48,8 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
         setLoading(true);
         setError(null);
 
-        const [perfilResult, resenasResult, publicacionesResult, miPerfilResult] = await Promise.all([
+        const [perfilResult, publicacionesResult, miPerfilResult] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', workerId).single(),
-          supabase
-            .from('resenas')
-            .select('*')
-            .eq('trabajador_id', workerId)
-            .order('created_at', { ascending: false }),
           supabase
             .from('publicaciones')
             .select('*')
@@ -72,10 +66,6 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
           setError(perfilResult.error.message);
         } else {
           setTrabajador(perfilResult.data);
-        }
-
-        if (!resenasResult.error) {
-          setResenas(resenasResult.data ?? []);
         }
 
         if (!publicacionesResult.error) {
@@ -242,36 +232,6 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
             </View>
           </View>
         )}
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Historial de trabajos {resenas.length > 0 ? `(${resenas.length})` : ''}
-          </Text>
-
-          {resenas.length === 0 ? (
-            <Text style={styles.sinResenas}>Todavía no tiene trabajos ni reseñas cargadas.</Text>
-          ) : (
-            resenas.map((resena) => (
-              <View key={resena.id} style={styles.resenaCard}>
-                <View style={styles.resenaHeader}>
-                  <Text style={styles.resenaTrabajo} numberOfLines={2}>
-                    {resena.trabajo_descripcion ?? 'Trabajo realizado'}
-                  </Text>
-                  <StarRating
-                    calificacion={resena.calificacion}
-                    cantidad={1}
-                    size={12}
-                    mostrarConteo={false}
-                  />
-                </View>
-                {resena.comentario && <Text style={styles.resenaComentario}>“{resena.comentario}”</Text>}
-                <Text style={styles.resenaCliente}>
-                  — {resena.cliente_nombre}, {formatearFecha(resena.created_at)}
-                </Text>
-              </View>
-            ))
-          )}
-        </View>
       </ScrollView>
 
       <ConfirmDialog
@@ -285,10 +245,6 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
       />
     </>
   );
-}
-
-function formatearFecha(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-UY', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 const styles = StyleSheet.create({
@@ -397,37 +353,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
     lineHeight: 20,
-  },
-  sinResenas: {
-    fontSize: 14,
-    color: colors.textMuted,
-    fontStyle: 'italic',
-  },
-  resenaCard: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: 10,
-    gap: 4,
-  },
-  resenaHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  resenaTrabajo: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    flex: 1,
-  },
-  resenaComentario: {
-    fontSize: 13,
-    color: colors.text,
-    fontStyle: 'italic',
-  },
-  resenaCliente: {
-    fontSize: 12,
-    color: colors.textMuted,
   },
 });
