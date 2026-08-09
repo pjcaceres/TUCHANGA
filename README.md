@@ -32,7 +32,7 @@ src/
     HeaderMenu.tsx            Menú "⋮" desplegable con Premium (solo trabajador) / Mis chats / Configuración
     PublicacionCard.tsx       Tarjeta de una publicación del feed: carrusel de fotos, autor opcional, descripción, likes y fecha
     PublicacionesGrid.tsx     Cuadrícula estilo Instagram de miniaturas (usada en Mi Perfil), con badge de "varias fotos" y de likes
-    Carousel.tsx              Carrusel deslizable de fotos con puntitos indicadores (usado dentro de PublicacionCard)
+    Carousel.tsx              Carrusel deslizable de fotos con flechas ‹ › y contador "posición/total" (usado dentro de PublicacionCard)
     LikeButton.tsx            Botón de "me gusta" (corazón) + contador, con variante chica para el grid
     ConfirmDialog.tsx         Modal de confirmación genérico (usado para borrar una publicación)
   constants/
@@ -239,13 +239,17 @@ que el límite también se recorta en el cliente para que valga en todas las pla
 `subirFotosDeTrabajo()` sube cada foto en orden (no en paralelo, para no perder el orden ni saturar
 la conexión) y después se insertan todas las filas de `publicacion_fotos` de una vez.
 
-`Carousel.tsx` es el componente que muestra esas fotos dentro de `PublicacionCard.tsx`: un
-`ScrollView` horizontal con paginado y puntitos indicadores abajo (solo si hay más de una foto). El
-ancho de cada foto se mide con `onLayout` para que ocupe el ancho real de la tarjeta en cualquier
-pantalla. En la cuadrícula de "Mis publicaciones" (`PublicacionesGrid.tsx`), en cambio, cada
-miniatura sigue siendo una sola foto (la primera, `orden = 0`) — ahí no hay espacio ni necesidad de
-un carrusel deslizable, así que si tiene más de una foto se muestra un badge chico "🖼 N" en la
-esquina, al estilo de cómo Instagram marca los posts de varias fotos en su propia cuadrícula.
+`Carousel.tsx` es el componente que muestra esas fotos dentro de `PublicacionCard.tsx` (feed y
+perfil del trabajador): un `ScrollView` horizontal con paginado, un contador "posición/total" (por
+ejemplo "2/6") arriba a la derecha que se actualiza solo con el scroll, y dos flechas ‹ › superpuestas
+sobre la foto para cambiar de una sin necesidad de deslizar — pensadas para cuando se prueba desde un
+navegador de escritorio, donde no hay gestos táctiles. La flecha izquierda no aparece en la primera
+foto ni la derecha en la última (no da la vuelta). El ancho de cada foto se mide con `onLayout` para
+que ocupe el ancho real de la tarjeta en cualquier pantalla. En la cuadrícula de "Mis publicaciones"
+(`PublicacionesGrid.tsx`), en cambio, cada miniatura sigue siendo una sola foto (la primera,
+`orden = 0`) — ahí no hay espacio ni necesidad de un carrusel deslizable, así que si tiene más de una
+foto se muestra el mismo formato de contador ("1/N") como badge fijo en la esquina, en vez del ícono
+"🖼 N" que tenía antes.
 
 ## Me gusta en publicaciones
 

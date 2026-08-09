@@ -33,7 +33,7 @@ export default function PublicacionesGrid({
             )}
             {fotos.length > 1 && (
               <View style={styles.multiFotoBadge}>
-                <Text style={styles.multiFotoBadgeTexto}>🖼 {fotos.length}</Text>
+                <Text style={styles.multiFotoBadgeTexto}>1/{fotos.length}</Text>
               </View>
             )}
             {onToggleLike && (
