@@ -147,9 +147,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   fotoBox: {
-    width: '100%',
-    aspectRatio: 4 / 3,
-    borderRadius: 12,
+    width: 140,
+    height: 105,
+    alignSelf: 'center',
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.background,
@@ -162,8 +163,9 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   fotoPlaceholder: {
-    fontSize: 15,
+    fontSize: 13,
     color: colors.textMuted,
+    textAlign: 'center',
   },
   cambiarFotoTexto: {
     fontSize: 13,

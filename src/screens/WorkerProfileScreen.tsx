@@ -10,6 +10,7 @@ import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { haContactadoAlTrabajador, obtenerOCrearConversacion } from '../lib/chat';
 import { esPremiumVigente } from '../lib/premium';
+import { eliminarPublicacion } from '../lib/publicaciones';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
 import type { Profile, Publicacion, Resena } from '../types/database';
@@ -28,6 +29,7 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
   const [contactando, setContactando] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorPublicacion, setErrorPublicacion] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -134,6 +136,18 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
   const puedeDejarResena = esCliente && esOtroUsuario && haContactado;
   const necesitaContactarPrimero = esCliente && esOtroUsuario && !haContactado;
 
+  const borrarPublicacion = async (publicacionId: string) => {
+    setErrorPublicacion(null);
+    const anteriores = publicaciones;
+    setPublicaciones((actuales) => actuales.filter((p) => p.id !== publicacionId));
+
+    const { error: deleteError } = await eliminarPublicacion(publicacionId);
+    if (deleteError) {
+      setPublicaciones(anteriores);
+      setErrorPublicacion(deleteError);
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.headerCard}>
@@ -202,9 +216,15 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
       {publicaciones.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Trabajos publicados ({publicaciones.length})</Text>
+          {errorPublicacion && <Text style={styles.errorText}>{errorPublicacion}</Text>}
           <View style={styles.publicacionesList}>
             {publicaciones.map((publicacion) => (
-              <PublicacionCard key={publicacion.id} publicacion={publicacion} />
+              <PublicacionCard
+                key={publicacion.id}
+                publicacion={publicacion}
+                esPropia={!esOtroUsuario}
+                onEliminar={!esOtroUsuario ? () => borrarPublicacion(publicacion.id) : undefined}
+              />
             ))}
           </View>
         </View>

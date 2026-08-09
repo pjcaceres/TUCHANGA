@@ -1,13 +1,15 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../constants/theme';
 
+export type TabActiva = 'trabajadores' | 'publicaciones';
+
 interface Props {
-  activo: 'trabajadores' | 'trabajos';
+  activo: TabActiva;
   onTrabajadores: () => void;
-  onTrabajos: () => void;
+  onPublicaciones: () => void;
 }
 
-export default function MainTabs({ activo, onTrabajadores, onTrabajos }: Props) {
+export default function MainTabs({ activo, onTrabajadores, onPublicaciones }: Props) {
   return (
     <View style={styles.container}>
       <Pressable
@@ -18,9 +20,12 @@ export default function MainTabs({ activo, onTrabajadores, onTrabajos }: Props) 
           👥 Trabajadores
         </Text>
       </Pressable>
-      <Pressable style={[styles.tab, activo === 'trabajos' && styles.tabActive]} onPress={onTrabajos}>
-        <Text style={[styles.tabText, activo === 'trabajos' && styles.tabTextActive]}>
-          📸 Trabajos
+      <Pressable
+        style={[styles.tab, activo === 'publicaciones' && styles.tabActive]}
+        onPress={onPublicaciones}
+      >
+        <Text style={[styles.tabText, activo === 'publicaciones' && styles.tabTextActive]}>
+          📸 Publicaciones
         </Text>
       </Pressable>
     </View>

@@ -2,10 +2,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import MainTabs from '../components/MainTabs';
+import AppHeader from '../components/AppHeader';
 import PublicacionCard from '../components/PublicacionCard';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { eliminarPublicacion } from '../lib/publicaciones';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
 import type { Publicacion } from '../types/database';
@@ -23,6 +24,7 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
   const [esTrabajador, setEsTrabajador] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorPublicacion, setErrorPublicacion] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -74,24 +76,40 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
     }, [userId])
   );
 
+  const borrarPublicacion = async (publicacionId: string) => {
+    setErrorPublicacion(null);
+    const anteriores = publicaciones;
+    setPublicaciones((actuales) => actuales.filter((p) => p.id !== publicacionId));
+
+    const { error: deleteError } = await eliminarPublicacion(publicacionId);
+    if (deleteError) {
+      setPublicaciones(anteriores);
+      setErrorPublicacion(deleteError);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Trabajos</Text>
-        <MainTabs
-          activo="trabajos"
-          onTrabajadores={() => navigation.navigate('WorkersList')}
-          onTrabajos={() => {}}
-        />
-        {esTrabajador && (
+      <AppHeader
+        activo="publicaciones"
+        esTrabajador={esTrabajador}
+        onTrabajadores={() => navigation.navigate('WorkersList')}
+        onPublicaciones={() => {}}
+        onPremium={() => navigation.navigate('Premium')}
+        onMisChats={() => navigation.navigate('MisChats')}
+        onConfiguracion={() => navigation.navigate('Configuracion')}
+      />
+
+      {esTrabajador && (
+        <View style={styles.publicarSection}>
           <Pressable
             style={styles.publicarButton}
             onPress={() => navigation.navigate('PublicarTrabajo')}
           >
             <Text style={styles.publicarButtonText}>+ Publicar un trabajo</Text>
           </Pressable>
-        )}
-      </View>
+        </View>
+      )}
 
       {loading ? (
         <View style={styles.centered}>
@@ -112,8 +130,14 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
           data={publicaciones}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          ListHeaderComponent={
+            errorPublicacion ? (
+              <Text style={[styles.errorText, styles.errorPublicacion]}>{errorPublicacion}</Text>
+            ) : null
+          }
           renderItem={({ item }) => {
             const autor = autoresPorId.get(item.trabajador_id);
+            const esPropia = item.trabajador_id === userId;
             return (
               <PublicacionCard
                 publicacion={item}
@@ -124,6 +148,8 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
                     nombre: autor?.nombre ?? 'Trabajador',
                   })
                 }
+                esPropia={esPropia}
+                onEliminar={esPropia ? () => borrarPublicacion(item.id) : undefined}
               />
             );
           }}
@@ -139,16 +165,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
+  publicarSection: {
     paddingHorizontal: 20,
-    paddingTop: 56,
     paddingBottom: 12,
-    gap: 12,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.primary,
   },
   publicarButton: {
     backgroundColor: colors.primary,
@@ -177,6 +196,9 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.error,
     textAlign: 'center',
+  },
+  errorPublicacion: {
+    marginBottom: 12,
   },
   emptyText: {
     color: colors.textMuted,

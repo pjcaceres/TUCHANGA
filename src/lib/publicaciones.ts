@@ -54,3 +54,15 @@ export async function subirFotoDeTrabajo(
     return { url: null, error: error instanceof Error ? error.message : 'No pudimos subir la foto.' };
   }
 }
+
+/**
+ * Borra una publicación propia. La política RLS de `publicaciones` ya
+ * exige que sea el trabajador dueño, pero igual filtramos por su id acá
+ * para no depender solo del lado del servidor.
+ */
+export async function eliminarPublicacion(
+  publicacionId: string
+): Promise<{ error: string | null }> {
+  const { error } = await supabase.from('publicaciones').delete().eq('id', publicacionId);
+  return { error: error?.message ?? null };
+}

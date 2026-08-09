@@ -24,7 +24,8 @@ src/
     AvatarPicker.tsx          Avatar + control para elegir/subir una foto nueva
     RubroChipsSelector.tsx    Chips de selección múltiple de rubros
     RubroChipsList.tsx        Chips de solo lectura para mostrar los rubros de un trabajador
-    MainTabs.tsx              Pestañas "Trabajadores" / "Trabajos" (listado y feed)
+    MainTabs.tsx              Pestañas "Trabajadores" / "Publicaciones" (listado y feed)
+    AppHeader.tsx             Header compartido (título + accesos + MainTabs) para que no cambie entre pestañas
     PublicacionCard.tsx       Tarjeta de una publicación del feed: foto, autor opcional, descripción y fecha
   constants/
     rubros.ts                Lista de rubros/oficios del MVP
@@ -77,6 +78,7 @@ supabase/
     0008_avatars_storage.sql    Bucket público "avatars" + políticas de Storage por usuario
     0009_rubros_multiples.sql   Reemplaza `rubro` (uno) por `rubros` (array) + migra los datos existentes
     0010_publicaciones.sql      Tabla `publicaciones` (feed de trabajos) + bucket público "publicaciones-fotos"
+    0011_publicaciones_borrado.sql  Política RLS para que un trabajador borre sus propias publicaciones
   seed.sql                    Trabajadores ficticios de prueba repartidos en varios departamentos
   functions/
     generar-perfil/           Edge Function: arma rubros/descripción/departamento con Claude (Anthropic)
@@ -98,6 +100,7 @@ supabase/
    - `supabase/migrations/0008_avatars_storage.sql`
    - `supabase/migrations/0009_rubros_multiples.sql`
    - `supabase/migrations/0010_publicaciones.sql`
+   - `supabase/migrations/0011_publicaciones_borrado.sql`
    - `supabase/seed.sql` (opcional, carga trabajadores de prueba para ver el listado funcionando)
 3. Desplegá la Edge Function `generar-perfil` y configurá su secreto (ver sección siguiente).
 4. Instalá dependencias y arrancá la app:
@@ -157,16 +160,19 @@ rubros aparece en el filtro de cualquiera de ellos.
 
 La parte "red social" de la app: cada trabajador puede publicar fotos de changas ya hechas, con una
 descripción corta opcional, y todos los usuarios (trabajador o cliente) ven ese feed en una pestaña
-nueva. `MainTabs.tsx` alterna entre "👥 Trabajadores" (el listado de siempre) y "📸 Trabajos" (el
-feed) arriba de ambas pantallas — no se agregó una librería de bottom-tabs, es un segmented control
-liviano sobre el stack navigator existente, igual al resto de la navegación de la app.
+nueva. `MainTabs.tsx` alterna entre "👥 Trabajadores" (el listado de siempre) y "📸 Publicaciones" (el
+feed) — es un segmented control liviano sobre el stack navigator existente, sin agregar una librería
+de bottom-tabs. `AppHeader.tsx` agrupa el título "TuChanga", los accesos (Premium/Mis chats/
+Configuración) y `MainTabs.tsx` en un solo componente que usan tanto `WorkersListScreen.tsx` como
+`PublicacionesFeedScreen.tsx`, para que cambiar de pestaña nunca haga desaparecer esos accesos.
 
 `publicaciones` (`0010_publicaciones.sql`) tiene `trabajador_id`, `imagen_url`, `descripcion`
 (opcional) y `created_at`. Cualquier usuario autenticado puede leer el feed completo (política de
-`select` abierta, como `profiles`); solo puede insertar una fila el propio trabajador dueño
-(`trabajador_id = auth.uid()` y su perfil es de tipo `trabajador`). Las fotos viven en el bucket
-público "publicaciones-fotos", con las mismas reglas que "avatars": lectura pública, escritura sólo
-en la carpeta `<user_id>/...` de quien sube, y sólo si es una cuenta trabajador.
+`select` abierta, como `profiles`); solo puede insertar o borrar una fila el propio trabajador dueño
+(`trabajador_id = auth.uid()`, y para insertar además su perfil debe ser de tipo `trabajador` —
+`0011_publicaciones_borrado.sql` agrega la política de borrado). Las fotos viven en el bucket público
+"publicaciones-fotos", con las mismas reglas que "avatars": lectura pública, escritura sólo en la
+carpeta `<user_id>/...` de quien sube, y sólo si es una cuenta trabajador.
 
 `PublicacionesFeedScreen.tsx` ordena por `created_at` descendente (el orden por premium queda para
 otra etapa) y resuelve el nombre/foto de cada autor con una consulta aparte a `profiles` (mismo
@@ -175,6 +181,12 @@ trabajo" sólo se muestra si el perfil logueado es de tipo `trabajador`, y lleva
 `PublicarTrabajoScreen.tsx` (elegir foto + descripción, sube con `lib/publicaciones.ts` y crea la
 fila). `WorkerProfileScreen.tsx` reutiliza `PublicacionCard.tsx` sin el bloque de autor para mostrar,
 en una sección "Trabajos publicados", sólo las fotos de ese trabajador.
+
+`PublicacionCard.tsx` es una tarjeta horizontal compacta (foto chica a la izquierda, texto a la
+derecha), en proporción similar a `WorkerCard.tsx`, no una foto a pantalla completa. Cuando la
+publicación es del trabajador que está mirando el feed (o su propio perfil), la tarjeta muestra
+"Tu publicación" y un botón "Eliminar" (`eliminarPublicacion()` en `lib/publicaciones.ts`); no
+aparece en las publicaciones de otros trabajadores.
 
 ## Perfil de trabajador generado por IA
 

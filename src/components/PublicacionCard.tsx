@@ -12,20 +12,44 @@ interface Props {
   publicacion: Publicacion;
   autor?: Autor;
   onPressAutor?: () => void;
+  esPropia?: boolean;
+  onEliminar?: () => void;
 }
 
-export default function PublicacionCard({ publicacion, autor, onPressAutor }: Props) {
+export default function PublicacionCard({
+  publicacion,
+  autor,
+  onPressAutor,
+  esPropia,
+  onEliminar,
+}: Props) {
   return (
     <View style={styles.card}>
-      {autor && (
-        <Pressable style={styles.autorRow} onPress={onPressAutor} disabled={!onPressAutor}>
-          <Avatar fotoUrl={autor.fotoUrl} nombre={autor.nombre} size={36} />
-          <Text style={styles.autorNombre}>{autor.nombre}</Text>
-        </Pressable>
-      )}
       <Image source={{ uri: publicacion.imagen_url }} style={styles.imagen} resizeMode="cover" />
-      {publicacion.descripcion && <Text style={styles.descripcion}>{publicacion.descripcion}</Text>}
-      <Text style={styles.fecha}>{formatearFecha(publicacion.created_at)}</Text>
+      <View style={styles.info}>
+        {autor && (
+          <Pressable style={styles.autorRow} onPress={onPressAutor} disabled={!onPressAutor}>
+            <Avatar fotoUrl={autor.fotoUrl} nombre={autor.nombre} size={22} />
+            <Text style={styles.autorNombre} numberOfLines={1}>
+              {autor.nombre}
+            </Text>
+          </Pressable>
+        )}
+        {esPropia && <Text style={styles.propiaTexto}>Tu publicación</Text>}
+        {publicacion.descripcion && (
+          <Text style={styles.descripcion} numberOfLines={2}>
+            {publicacion.descripcion}
+          </Text>
+        )}
+        <View style={styles.footerRow}>
+          <Text style={styles.fecha}>{formatearFecha(publicacion.created_at)}</Text>
+          {esPropia && onEliminar && (
+            <Pressable onPress={onEliminar} hitSlop={8}>
+              <Text style={styles.eliminarTexto}>Eliminar</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
     </View>
   );
 }
@@ -36,39 +60,59 @@ function formatearFecha(iso: string): string {
 
 const styles = StyleSheet.create({
   card: {
+    flexDirection: 'row',
     backgroundColor: colors.surface,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    overflow: 'hidden',
+    padding: 12,
+    gap: 12,
+  },
+  imagen: {
+    width: 84,
+    height: 84,
+    borderRadius: 10,
+    backgroundColor: colors.background,
+  },
+  info: {
+    flex: 1,
+    gap: 4,
+    justifyContent: 'center',
   },
   autorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 12,
+    gap: 8,
   },
   autorNombre: {
     fontSize: 14,
     fontWeight: '700',
     color: colors.text,
+    flexShrink: 1,
   },
-  imagen: {
-    width: '100%',
-    aspectRatio: 4 / 3,
-    backgroundColor: colors.background,
+  propiaTexto: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
   },
   descripcion: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.text,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    lineHeight: 19,
+    lineHeight: 18,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 2,
   },
   fecha: {
     fontSize: 12,
     color: colors.textMuted,
-    padding: 12,
-    paddingTop: 6,
+  },
+  eliminarTexto: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.error,
   },
 });

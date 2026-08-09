@@ -12,8 +12,8 @@ import {
   Text,
   View,
 } from 'react-native';
+import AppHeader from '../components/AppHeader';
 import DepartamentoSelector from '../components/DepartamentoSelector';
-import MainTabs from '../components/MainTabs';
 import WorkerCard from '../components/WorkerCard';
 import {
   DEPARTAMENTO_POR_DEFECTO,
@@ -194,30 +194,15 @@ export default function WorkersListScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>TuChanga</Text>
-        <View style={styles.headerActions}>
-          {esTrabajador && (
-            <Pressable onPress={() => navigation.navigate('Premium')}>
-              <Text style={styles.premiumLink}>⭐ Premium</Text>
-            </Pressable>
-          )}
-          <Pressable onPress={() => navigation.navigate('MisChats')}>
-            <Text style={styles.logout}>💬 Mis chats</Text>
-          </Pressable>
-          <Pressable onPress={() => navigation.navigate('Configuracion')}>
-            <Text style={styles.logout}>⚙️ Configuración</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <View style={styles.tabsSection}>
-        <MainTabs
-          activo="trabajadores"
-          onTrabajadores={() => {}}
-          onTrabajos={() => navigation.navigate('PublicacionesFeed')}
-        />
-      </View>
+      <AppHeader
+        activo="trabajadores"
+        esTrabajador={esTrabajador}
+        onTrabajadores={() => {}}
+        onPublicaciones={() => navigation.navigate('PublicacionesFeed')}
+        onPremium={() => navigation.navigate('Premium')}
+        onMisChats={() => navigation.navigate('MisChats')}
+        onConfiguracion={() => navigation.navigate('Configuracion')}
+      />
 
       {mostrarBannerPremium && (
         <View style={styles.bannerPremium}>
@@ -316,38 +301,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 56,
-    paddingBottom: 12,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  premiumLink: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-  logout: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  tabsSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
   },
   bannerPremium: {
     flexDirection: 'row',
