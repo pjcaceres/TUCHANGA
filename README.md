@@ -27,6 +27,7 @@ src/
     MainTabs.tsx              Pestañas "Trabajadores" / "Publicaciones" (listado y feed)
     AppHeader.tsx             Header compartido (título + accesos + MainTabs) para que no cambie entre pestañas
     PublicacionCard.tsx       Tarjeta de una publicación del feed: foto, autor opcional, descripción y fecha
+    ConfirmDialog.tsx         Modal de confirmación genérico (usado para borrar una publicación)
   constants/
     rubros.ts                Lista de rubros/oficios del MVP
     departamentos.ts          19 departamentos de Uruguay + detección por cercanía
@@ -182,11 +183,20 @@ trabajo" sólo se muestra si el perfil logueado es de tipo `trabajador`, y lleva
 fila). `WorkerProfileScreen.tsx` reutiliza `PublicacionCard.tsx` sin el bloque de autor para mostrar,
 en una sección "Trabajos publicados", sólo las fotos de ese trabajador.
 
-`PublicacionCard.tsx` es una tarjeta horizontal compacta (foto chica a la izquierda, texto a la
-derecha), en proporción similar a `WorkerCard.tsx`, no una foto a pantalla completa. Cuando la
-publicación es del trabajador que está mirando el feed (o su propio perfil), la tarjeta muestra
-"Tu publicación" y un botón "Eliminar" (`eliminarPublicacion()` en `lib/publicaciones.ts`); no
-aparece en las publicaciones de otros trabajadores.
+`PublicacionCard.tsx` tiene la foto ocupando el ancho completo de la tarjeta (relación 4:5, estilo
+Instagram) con el autor arriba y la descripción/fecha abajo — ni un cuadradito chico ni una foto a
+pantalla completa. Cuando la publicación es del trabajador que está mirando el feed (o su propio
+perfil), la tarjeta muestra "Tu publicación" y un botón "Eliminar"; no aparece en las publicaciones
+de otros trabajadores.
+
+Tocar "Eliminar" abre `ConfirmDialog.tsx` (un `Modal` propio, no `Alert.alert` de React Native — en
+react-native-web esa API es un no-op y no muestra nada) para confirmar antes de borrar. Al confirmar,
+`eliminarPublicacion()` en `lib/publicaciones.ts` hace `.delete().eq('id', …).select('id')`: si la
+política RLS de borrado bloquea la fila (por ejemplo, si `0011_publicaciones_borrado.sql` no se
+aplicó todavía contra el proyecto), PostgREST responde 200 sin ningún error aunque no haya borrado
+nada — por eso se chequea que `data` tenga al menos una fila para considerarlo un éxito real, y si no,
+se muestra un error visible y se revierte el borrado optimista en la UI (la fila no vuelve a
+aparecer sola después de recargar por error, como pasaba antes de este chequeo).
 
 ## Perfil de trabajador generado por IA
 

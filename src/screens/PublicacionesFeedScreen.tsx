@@ -3,6 +3,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import AppHeader from '../components/AppHeader';
+import ConfirmDialog from '../components/ConfirmDialog';
 import PublicacionCard from '../components/PublicacionCard';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,6 +26,7 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorPublicacion, setErrorPublicacion] = useState<string | null>(null);
+  const [aBorrarId, setABorrarId] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -76,7 +78,11 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
     }, [userId])
   );
 
-  const borrarPublicacion = async (publicacionId: string) => {
+  const confirmarBorrado = async () => {
+    const publicacionId = aBorrarId;
+    setABorrarId(null);
+    if (!publicacionId) return;
+
     setErrorPublicacion(null);
     const anteriores = publicaciones;
     setPublicaciones((actuales) => actuales.filter((p) => p.id !== publicacionId));
@@ -149,13 +155,23 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
                   })
                 }
                 esPropia={esPropia}
-                onEliminar={esPropia ? () => borrarPublicacion(item.id) : undefined}
+                onEliminar={esPropia ? () => setABorrarId(item.id) : undefined}
               />
             );
           }}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
       )}
+
+      <ConfirmDialog
+        visible={aBorrarId !== null}
+        titulo="Eliminar publicación"
+        mensaje="¿Estás seguro que querés eliminar esta publicación? Esta acción no se puede deshacer."
+        textoConfirmar="Eliminar"
+        destructivo
+        onConfirmar={confirmarBorrado}
+        onCancelar={() => setABorrarId(null)}
+      />
     </View>
   );
 }

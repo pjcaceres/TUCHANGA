@@ -25,22 +25,26 @@ export default function PublicacionCard({
 }: Props) {
   return (
     <View style={styles.card}>
+      {(autor || esPropia) && (
+        <View style={styles.headerRow}>
+          {autor ? (
+            <Pressable style={styles.autorRow} onPress={onPressAutor} disabled={!onPressAutor}>
+              <Avatar fotoUrl={autor.fotoUrl} nombre={autor.nombre} size={32} />
+              <Text style={styles.autorNombre} numberOfLines={1}>
+                {autor.nombre}
+              </Text>
+            </Pressable>
+          ) : (
+            <View />
+          )}
+          {esPropia && <Text style={styles.propiaTexto}>Tu publicación</Text>}
+        </View>
+      )}
+
       <Image source={{ uri: publicacion.imagen_url }} style={styles.imagen} resizeMode="cover" />
+
       <View style={styles.info}>
-        {autor && (
-          <Pressable style={styles.autorRow} onPress={onPressAutor} disabled={!onPressAutor}>
-            <Avatar fotoUrl={autor.fotoUrl} nombre={autor.nombre} size={22} />
-            <Text style={styles.autorNombre} numberOfLines={1}>
-              {autor.nombre}
-            </Text>
-          </Pressable>
-        )}
-        {esPropia && <Text style={styles.propiaTexto}>Tu publicación</Text>}
-        {publicacion.descripcion && (
-          <Text style={styles.descripcion} numberOfLines={2}>
-            {publicacion.descripcion}
-          </Text>
-        )}
+        {publicacion.descripcion && <Text style={styles.descripcion}>{publicacion.descripcion}</Text>}
         <View style={styles.footerRow}>
           <Text style={styles.fecha}>{formatearFecha(publicacion.created_at)}</Text>
           {esPropia && onEliminar && (
@@ -60,29 +64,26 @@ function formatearFecha(iso: string): string {
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
     backgroundColor: colors.surface,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 12,
-    gap: 12,
+    overflow: 'hidden',
   },
-  imagen: {
-    width: 84,
-    height: 84,
-    borderRadius: 10,
-    backgroundColor: colors.background,
-  },
-  info: {
-    flex: 1,
-    gap: 4,
-    justifyContent: 'center',
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
+    gap: 8,
   },
   autorRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 1,
   },
   autorNombre: {
     fontSize: 14,
@@ -95,16 +96,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.primary,
   },
+  imagen: {
+    width: '100%',
+    aspectRatio: 4 / 5,
+    backgroundColor: colors.background,
+  },
+  info: {
+    padding: 12,
+    gap: 6,
+  },
   descripcion: {
-    fontSize: 13,
+    fontSize: 14,
     color: colors.text,
-    lineHeight: 18,
+    lineHeight: 19,
   },
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 2,
   },
   fecha: {
     fontSize: 12,

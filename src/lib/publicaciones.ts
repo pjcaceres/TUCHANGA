@@ -56,13 +56,30 @@ export async function subirFotoDeTrabajo(
 }
 
 /**
- * Borra una publicación propia. La política RLS de `publicaciones` ya
- * exige que sea el trabajador dueño, pero igual filtramos por su id acá
- * para no depender solo del lado del servidor.
+ * Borra una publicación propia. Si la política RLS de borrado no está
+ * aplicada (o la publicación no es del usuario), Postgres/PostgREST no
+ * devuelve ningún error: simplemente no borra ninguna fila. Por eso
+ * pedimos `.select('id')` de lo borrado y tratamos "cero filas" como un
+ * error visible, en vez de asumir éxito solo porque no hubo excepción.
  */
 export async function eliminarPublicacion(
   publicacionId: string
 ): Promise<{ error: string | null }> {
-  const { error } = await supabase.from('publicaciones').delete().eq('id', publicacionId);
-  return { error: error?.message ?? null };
+  const { data, error } = await supabase
+    .from('publicaciones')
+    .delete()
+    .eq('id', publicacionId)
+    .select('id');
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  if (!data || data.length === 0) {
+    return {
+      error: 'No pudimos borrar la publicación: no tenés permiso o ya fue borrada. Probá de nuevo.',
+    };
+  }
+
+  return { error: null };
 }
