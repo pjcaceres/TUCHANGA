@@ -32,7 +32,7 @@ src/
     HeaderMenu.tsx            Menú "⋮" desplegable con Premium (solo trabajador) / Mis chats / Configuración
     PublicacionCard.tsx       Tarjeta de una publicación del feed: carrusel de fotos, autor opcional, descripción, likes y fecha
     PublicacionesGrid.tsx     Cuadrícula estilo Instagram de miniaturas (usada en Mi Perfil), con badge de "varias fotos" y de likes
-    Carousel.tsx              Carrusel deslizable de fotos con flechas ‹ › y contador "posición/total" (usado dentro de PublicacionCard)
+    Carousel.tsx              Carrusel deslizable de fotos con flechas ‹ › y contador "posición/total" (PublicacionCard y PublicacionesGrid)
     LikeButton.tsx            Botón de "me gusta" (corazón) + contador, con variante chica para el grid
     ConfirmDialog.tsx         Modal de confirmación genérico (usado para borrar una publicación)
   constants/
@@ -239,17 +239,19 @@ que el límite también se recorta en el cliente para que valga en todas las pla
 `subirFotosDeTrabajo()` sube cada foto en orden (no en paralelo, para no perder el orden ni saturar
 la conexión) y después se insertan todas las filas de `publicacion_fotos` de una vez.
 
-`Carousel.tsx` es el componente que muestra esas fotos dentro de `PublicacionCard.tsx` (feed y
-perfil del trabajador): un `ScrollView` horizontal con paginado, un contador "posición/total" (por
-ejemplo "2/6") arriba a la derecha que se actualiza solo con el scroll, y dos flechas ‹ › superpuestas
-sobre la foto para cambiar de una sin necesidad de deslizar — pensadas para cuando se prueba desde un
-navegador de escritorio, donde no hay gestos táctiles. La flecha izquierda no aparece en la primera
-foto ni la derecha en la última (no da la vuelta). El ancho de cada foto se mide con `onLayout` para
-que ocupe el ancho real de la tarjeta en cualquier pantalla. En la cuadrícula de "Mis publicaciones"
-(`PublicacionesGrid.tsx`), en cambio, cada miniatura sigue siendo una sola foto (la primera,
-`orden = 0`) — ahí no hay espacio ni necesidad de un carrusel deslizable, así que si tiene más de una
-foto se muestra el mismo formato de contador ("1/N") como badge fijo en la esquina, en vez del ícono
-"🖼 N" que tenía antes.
+`Carousel.tsx` es el componente que muestra esas fotos: un `ScrollView` horizontal con paginado, un
+contador "posición/total" (por ejemplo "2/6") arriba a la derecha que se actualiza solo con el
+scroll, y dos flechas ‹ › superpuestas sobre la foto para cambiar de una sin necesidad de deslizar —
+pensadas para cuando se prueba desde un navegador de escritorio, donde no hay gestos táctiles. La
+flecha izquierda no aparece en la primera foto ni la derecha en la última (no da la vuelta), y un
+ref (`desplazandoRef`) evita que el `onScroll` pise el índice mientras corre el `scrollTo()` animado
+de una flecha — sin eso, el contador parpadeaba un instante al valor anterior antes de asentarse en
+el correcto. El tamaño del contenedor se fija con la propiedad de estilo `aspectRatio` (Yoga la
+calcula en el mismo layout, sin esperar a un `onLayout` de ida y vuelta), y el ancho real de cada
+foto individual sí se mide con `onLayout` para el cálculo de paginado — así el carrusel puede usarse
+tanto en `PublicacionCard.tsx` (feed y perfil del trabajador, con `aspectRatio` 4:5) como en la
+cuadrícula cuadrada de "Mis publicaciones" (`PublicacionesGrid.tsx`, con `aspectRatio` 1), con la
+misma navegación por flechas/swipe y el mismo contador en los tres lugares.
 
 ## Me gusta en publicaciones
 
@@ -275,8 +277,13 @@ chats / ⚙️ Configuración) por un único ícono "⋮" arriba a la derecha qu
 (un `Modal` con el contenido posicionado como un dropdown, no una librería de menús). El contenido
 del menú depende del tipo de cuenta: un trabajador ve las tres opciones; un cliente sólo ve "Mis
 chats" y "Configuración" (nunca vio "Editar perfil" ahí — ya lo tiene dentro de Configuración). La
-pantalla de Configuración en sí (`ConfiguracionScreen.tsx`) no cambió: sigue teniendo Editar perfil,
-Términos y Condiciones, Política de Privacidad y Cerrar sesión; sólo cambió cómo se llega a ella.
+pantalla de Configuración en sí (`ConfiguracionScreen.tsx`) sigue teniendo Editar perfil, Términos
+y Condiciones, Política de Privacidad y Cerrar sesión; lo que cambió fue de dónde saca
+`tipo_usuario` para decidir si mostrar "Editar perfil": antes lo buscaba con su propio
+`useFocusEffect` + `useState` (arrancando en `null` cada vez que se entraba a la pantalla, así que
+el ítem tardaba un instante en aparecer — un parpadeo visible), ahora usa `useMiPerfil()` del
+`ProfileContext.tsx` ya resuelto a nivel de toda la app, igual que `WorkersListScreen.tsx` y
+`PublicacionesFeedScreen.tsx`, así que aparece de entrada sin ese salto.
 
 La tercera pestaña "👤 Mi Perfil" (`MiPerfilScreen.tsx`) sólo aparece en `MainTabs.tsx` cuando el
 usuario logueado es trabajador — un cliente sigue viendo nada más que "Trabajadores" y
@@ -284,10 +291,13 @@ usuario logueado es trabajador — un cliente sigue viendo nada más que "Trabaj
 perfil público con feed de trabajos. Muestra la misma cabecera que `WorkerProfileScreen.tsx` (foto,
 nombre, `RubroChipsList.tsx`, calificación) más un botón "Editar perfil" y el estado de Premium
 (vigente o no, con acceso directo a `PremiumScreen.tsx`), y abajo todas las publicaciones propias en
-`PublicacionesGrid.tsx` — una cuadrícula de miniaturas cuadradas de 3 columnas, estilo Instagram,
-distinta del layout de tarjeta completa que usa el feed. Cada miniatura tiene una "✕" arriba a la
-derecha para borrarla (con la misma confirmación de `ConfirmDialog.tsx`); es el único lugar de la
-pestaña de publicaciones donde un trabajador puede administrar sus propias fotos.
+`PublicacionesGrid.tsx` — una cuadrícula de celdas cuadradas de 3 columnas, estilo Instagram,
+distinta del layout de tarjeta completa que usa el feed. Cada celda es el mismo `Carousel.tsx` que
+usa el feed (con `aspectRatio={1}`), así que también se puede navegar entre sus fotos con flechas o
+swipe ahí mismo, sin necesidad de abrir la publicación en otro lado. El corazón de "me gusta" queda
+abajo a la izquierda y una "✕" abajo a la derecha para borrarla (con la misma confirmación de
+`ConfirmDialog.tsx`); es el único lugar de la pestaña de publicaciones donde un trabajador puede
+administrar sus propias fotos.
 
 `WorkersListScreen.tsx` y `PublicacionesFeedScreen.tsx` son rutas de un mismo stack navigator (no un
 tab navigator real), así que React Navigation las mantiene montadas de fondo — pero cada una tenía su
@@ -448,8 +458,9 @@ confiar en ella a ciegas.
 
 Un usuario tipo cliente ve un botón "✍️ Dejar reseña" en el perfil de cualquier trabajador (no en
 el suyo propio), pero **solo si ya lo contactó** (existe al menos un mensaje suyo en esa
-conversación — `haContactadoAlTrabajador` en `src/lib/chat.ts`); si todavía no lo contactó, ve un
-aviso explicándoselo en su lugar. El formulario pide calificación (1 a 5 estrellas, tap para
+conversación — `haContactadoAlTrabajador` en `src/lib/chat.ts`); si todavía no lo contactó, el
+botón simplemente no aparece (sin aviso explicándolo — el botón "💬 Contactar" ya está justo
+arriba, así que resultaba redundante). El formulario pide calificación (1 a 5 estrellas, tap para
 elegir), qué trabajo le realizó y un comentario opcional. Al guardar se inserta una fila en
 `resenas` asociada al trabajador y al cliente autenticado (`cliente_id = auth.uid()`, forzado por
 RLS para que nadie pueda dejar una reseña en nombre de otro), el trigger existente recalcula

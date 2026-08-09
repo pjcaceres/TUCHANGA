@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import {
-  Dimensions,
   Image,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -9,81 +8,97 @@ import {
   StyleSheet,
   Text,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import { colors } from '../constants/theme';
 
 interface Props {
   urls: string[];
   aspectRatio?: number;
+  style?: StyleProp<ViewStyle>;
 }
 
-const ANCHO_INICIAL_ESTIMADO = Dimensions.get('window').width - 40;
-
-export default function Carousel({ urls, aspectRatio = 4 / 5 }: Props) {
+export default function Carousel({ urls, aspectRatio = 4 / 5, style }: Props) {
   const [indice, setIndice] = useState(0);
-  const [ancho, setAncho] = useState(ANCHO_INICIAL_ESTIMADO);
+  const [ancho, setAncho] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+  const desplazandoRef = useRef(false);
 
   const hayVarias = urls.length > 1;
 
   const manejarScroll = (evento: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (ancho === 0) return;
+    if (ancho === 0 || desplazandoRef.current) return;
     const nuevoIndice = Math.round(evento.nativeEvent.contentOffset.x / ancho);
     setIndice(nuevoIndice);
   };
 
+  const manejarFinDeDesplazamiento = () => {
+    desplazandoRef.current = false;
+  };
+
   const irA = (nuevoIndice: number) => {
-    if (nuevoIndice < 0 || nuevoIndice >= urls.length) return;
+    if (nuevoIndice < 0 || nuevoIndice >= urls.length || ancho === 0) return;
+    desplazandoRef.current = true;
     setIndice(nuevoIndice);
     scrollRef.current?.scrollTo({ x: nuevoIndice * ancho, animated: true });
   };
 
   return (
-    <View onLayout={(evento) => setAncho(evento.nativeEvent.layout.width)}>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={manejarScroll}
-        scrollEventThrottle={16}
-      >
-        {urls.map((url, i) => (
-          <Image
-            key={i}
-            source={{ uri: url }}
-            style={[styles.imagen, { width: ancho, aspectRatio }]}
-            resizeMode="cover"
-          />
-        ))}
-      </ScrollView>
-
-      {hayVarias && (
+    <View
+      style={[styles.contenedor, { aspectRatio }, style]}
+      onLayout={(evento) => setAncho(evento.nativeEvent.layout.width)}
+    >
+      {ancho > 0 && (
         <>
-          <View style={styles.contador}>
-            <Text style={styles.contadorTexto}>
-              {indice + 1}/{urls.length}
-            </Text>
-          </View>
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={manejarScroll}
+            onMomentumScrollEnd={manejarFinDeDesplazamiento}
+            scrollEventThrottle={16}
+            style={styles.scroll}
+          >
+            {urls.map((url, i) => (
+              <Image
+                key={i}
+                source={{ uri: url }}
+                style={[styles.imagen, { width: ancho }]}
+                resizeMode="cover"
+              />
+            ))}
+          </ScrollView>
 
-          {indice > 0 && (
-            <Pressable
-              style={[styles.flecha, styles.flechaIzquierda]}
-              onPress={() => irA(indice - 1)}
-              hitSlop={8}
-            >
-              <Text style={styles.flechaTexto}>‹</Text>
-            </Pressable>
-          )}
+          {hayVarias && (
+            <>
+              <View style={styles.contador}>
+                <Text style={styles.contadorTexto}>
+                  {indice + 1}/{urls.length}
+                </Text>
+              </View>
 
-          {indice < urls.length - 1 && (
-            <Pressable
-              style={[styles.flecha, styles.flechaDerecha]}
-              onPress={() => irA(indice + 1)}
-              hitSlop={8}
-            >
-              <Text style={styles.flechaTexto}>›</Text>
-            </Pressable>
+              {indice > 0 && (
+                <Pressable
+                  style={[styles.flecha, styles.flechaIzquierda]}
+                  onPress={() => irA(indice - 1)}
+                  hitSlop={8}
+                >
+                  <Text style={styles.flechaTexto}>‹</Text>
+                </Pressable>
+              )}
+
+              {indice < urls.length - 1 && (
+                <Pressable
+                  style={[styles.flecha, styles.flechaDerecha]}
+                  onPress={() => irA(indice + 1)}
+                  hitSlop={8}
+                >
+                  <Text style={styles.flechaTexto}>›</Text>
+                </Pressable>
+              )}
+            </>
           )}
         </>
       )}
@@ -92,8 +107,16 @@ export default function Carousel({ urls, aspectRatio = 4 / 5 }: Props) {
 }
 
 const styles = StyleSheet.create({
-  imagen: {
+  contenedor: {
+    width: '100%',
     backgroundColor: colors.background,
+    overflow: 'hidden',
+  },
+  scroll: {
+    flex: 1,
+  },
+  imagen: {
+    height: '100%',
   },
   contador: {
     position: 'absolute',

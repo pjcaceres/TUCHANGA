@@ -145,7 +145,6 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
 
   const esOtroUsuario = trabajador.id !== session?.user.id;
   const puedeDejarResena = esCliente && esOtroUsuario && haContactado;
-  const necesitaContactarPrimero = esCliente && esOtroUsuario && !haContactado;
 
   const confirmarBorrado = async () => {
     const publicacionId = aBorrarId;
@@ -213,12 +212,6 @@ export default function WorkerProfileScreen({ route, navigation }: Props) {
             >
               <Text style={styles.resenaButtonText}>✍️ Dejar reseña</Text>
             </Pressable>
-          )}
-
-          {necesitaContactarPrimero && (
-            <Text style={styles.avisoContacto}>
-              Necesitás contactar a este trabajador antes de poder dejarle una reseña.
-            </Text>
           )}
         </View>
 
@@ -383,13 +376,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
-  },
-  avisoContacto: {
-    marginTop: 10,
-    fontSize: 13,
-    color: colors.textMuted,
-    textAlign: 'center',
-    paddingHorizontal: 8,
   },
   section: {
     backgroundColor: colors.surface,

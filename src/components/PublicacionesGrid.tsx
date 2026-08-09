@@ -1,6 +1,6 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../constants/theme';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Publicacion, PublicacionFoto } from '../types/database';
+import Carousel from './Carousel';
 import LikeButton from './LikeButton';
 
 interface Props {
@@ -24,17 +24,15 @@ export default function PublicacionesGrid({
     <View style={styles.grid}>
       {publicaciones.map((publicacion) => {
         const fotos = fotosPorId.get(publicacion.id) ?? [];
-        const primeraFoto = fotos[0]?.imagen_url;
 
         return (
           <View key={publicacion.id} style={styles.celdaWrap}>
-            {primeraFoto && (
-              <Image source={{ uri: primeraFoto }} style={styles.celda} resizeMode="cover" />
-            )}
-            {fotos.length > 1 && (
-              <View style={styles.multiFotoBadge}>
-                <Text style={styles.multiFotoBadgeTexto}>1/{fotos.length}</Text>
-              </View>
+            {fotos.length > 0 && (
+              <Carousel
+                urls={fotos.map((f) => f.imagen_url)}
+                aspectRatio={1}
+                style={styles.celda}
+              />
             )}
             {onToggleLike && (
               <View style={styles.likeBadge}>
@@ -74,24 +72,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   celda: {
-    width: '100%',
-    height: '100%',
     borderRadius: 4,
-    backgroundColor: colors.background,
-  },
-  multiFotoBadge: {
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-  },
-  multiFotoBadgeTexto: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
   },
   likeBadge: {
     position: 'absolute',
@@ -104,7 +85,7 @@ const styles = StyleSheet.create({
   },
   eliminarBadge: {
     position: 'absolute',
-    top: 4,
+    bottom: 4,
     right: 4,
     width: 22,
     height: 22,

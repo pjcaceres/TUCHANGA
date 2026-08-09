@@ -1,48 +1,23 @@
-import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../constants/theme';
-import { useAuth } from '../contexts/AuthContext';
+import { useMiPerfil } from '../contexts/ProfileContext';
 import { supabase } from '../lib/supabase';
 import type { AppStackParamList } from '../navigation/types';
-import type { TipoUsuario } from '../types/database';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Configuracion'>;
 
 export default function ConfiguracionScreen({ navigation }: Props) {
-  const { session } = useAuth();
-  const [tipoUsuario, setTipoUsuario] = useState<TipoUsuario | null>(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      let cancelado = false;
-      const userId = session?.user.id;
-      if (!userId) return;
-
-      supabase
-        .from('profiles')
-        .select('tipo_usuario')
-        .eq('id', userId)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (!cancelado) setTipoUsuario(data?.tipo_usuario ?? null);
-        });
-
-      return () => {
-        cancelado = true;
-      };
-    }, [session?.user.id])
-  );
+  const { perfil } = useMiPerfil();
 
   return (
     <View style={styles.container}>
-      {tipoUsuario && (
+      {perfil && (
         <Pressable
           style={styles.item}
           onPress={() =>
             navigation.navigate(
-              tipoUsuario === 'trabajador' ? 'EditarPerfil' : 'EditarPerfilCliente'
+              perfil.tipo_usuario === 'trabajador' ? 'EditarPerfil' : 'EditarPerfilCliente'
             )
           }
         >
