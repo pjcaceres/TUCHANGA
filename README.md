@@ -24,9 +24,11 @@ src/
     AvatarPicker.tsx          Avatar + control para elegir/subir una foto nueva
     RubroChipsSelector.tsx    Chips de selección múltiple de rubros
     RubroChipsList.tsx        Chips de solo lectura para mostrar los rubros de un trabajador
-    MainTabs.tsx              Pestañas "Trabajadores" / "Publicaciones" (listado y feed)
-    AppHeader.tsx             Header compartido (título + accesos + MainTabs) para que no cambie entre pestañas
+    MainTabs.tsx              Pestañas "Trabajadores" / "Publicaciones" / "Mi Perfil" (esta última solo trabajador)
+    AppHeader.tsx             Header compartido (título + HeaderMenu + MainTabs) para que no cambie entre pestañas
+    HeaderMenu.tsx            Menú "⋮" desplegable con Premium (solo trabajador) / Mis chats / Configuración
     PublicacionCard.tsx       Tarjeta de una publicación del feed: foto, autor opcional, descripción y fecha
+    PublicacionesGrid.tsx     Cuadrícula estilo Instagram de miniaturas (usada en Mi Perfil)
     ConfirmDialog.tsx         Modal de confirmación genérico (usado para borrar una publicación)
   constants/
     rubros.ts                Lista de rubros/oficios del MVP
@@ -65,6 +67,7 @@ src/
     ChatScreen.tsx             Chat de una conversación: burbujas, input y actualización en tiempo real (Supabase Realtime)
     PublicacionesFeedScreen.tsx  Feed de fotos de trabajos de todos los trabajadores, más recientes primero
     PublicarTrabajoScreen.tsx    Formulario para que un trabajador publique una foto + descripción corta opcional
+    MiPerfilScreen.tsx           Pestaña "Mi Perfil" (solo trabajador): foto, rubros, calificación, Editar perfil, Premium y grid de publicaciones propias
   types/
     database.ts               Tipos generados a mano del esquema de Supabase
 supabase/
@@ -161,11 +164,12 @@ rubros aparece en el filtro de cualquiera de ellos.
 
 La parte "red social" de la app: cada trabajador puede publicar fotos de changas ya hechas, con una
 descripción corta opcional, y todos los usuarios (trabajador o cliente) ven ese feed en una pestaña
-nueva. `MainTabs.tsx` alterna entre "👥 Trabajadores" (el listado de siempre) y "📸 Publicaciones" (el
-feed) — es un segmented control liviano sobre el stack navigator existente, sin agregar una librería
-de bottom-tabs. `AppHeader.tsx` agrupa el título "TuChanga", los accesos (Premium/Mis chats/
-Configuración) y `MainTabs.tsx` en un solo componente que usan tanto `WorkersListScreen.tsx` como
-`PublicacionesFeedScreen.tsx`, para que cambiar de pestaña nunca haga desaparecer esos accesos.
+nueva. `MainTabs.tsx` alterna entre "👥 Trabajadores" (el listado de siempre), "📸 Publicaciones" (el
+feed) y, sólo para cuentas trabajador, "👤 Mi Perfil" — es un segmented control liviano sobre el stack
+navigator existente, sin agregar una librería de bottom-tabs. `AppHeader.tsx` agrupa el título
+"TuChanga", `HeaderMenu.tsx` (el ícono "⋮" con Premium/Mis chats/Configuración, ver más abajo) y
+`MainTabs.tsx` en un solo componente que usan `WorkersListScreen.tsx`, `PublicacionesFeedScreen.tsx`
+y `MiPerfilScreen.tsx`, para que cambiar de pestaña nunca haga desaparecer esos accesos.
 
 `publicaciones` (`0010_publicaciones.sql`) tiene `trabajador_id`, `imagen_url`, `descripcion`
 (opcional) y `created_at`. Cualquier usuario autenticado puede leer el feed completo (política de
@@ -197,6 +201,25 @@ aplicó todavía contra el proyecto), PostgREST responde 200 sin ningún error a
 nada — por eso se chequea que `data` tenga al menos una fila para considerarlo un éxito real, y si no,
 se muestra un error visible y se revierte el borrado optimista en la UI (la fila no vuelve a
 aparecer sola después de recargar por error, como pasaba antes de este chequeo).
+
+## Mi Perfil y el menú "⋮" del header
+
+`HeaderMenu.tsx` reemplaza los links sueltos que antes vivían en el header (⭐ Premium / 💬 Mis
+chats / ⚙️ Configuración) por un único ícono "⋮" arriba a la derecha que despliega un menú chico
+(un `Modal` con el contenido posicionado como un dropdown, no una librería de menús). El contenido
+del menú depende del tipo de cuenta: un trabajador ve las tres opciones; un cliente sólo ve "Mis
+chats" y "Configuración" (nunca vio "Editar perfil" ahí — ya lo tiene dentro de Configuración). La
+pantalla de Configuración en sí (`ConfiguracionScreen.tsx`) no cambió: sigue teniendo Editar perfil,
+Términos y Condiciones, Política de Privacidad y Cerrar sesión; sólo cambió cómo se llega a ella.
+
+La tercera pestaña "👤 Mi Perfil" (`MiPerfilScreen.tsx`) sólo aparece en `MainTabs.tsx` cuando el
+usuario logueado es trabajador — un cliente sigue viendo nada más que "Trabajadores" y
+"Publicaciones", porque ya tiene su propio "Editar perfil" en Configuración y no le hace falta un
+perfil público con feed de trabajos. Muestra la misma cabecera que `WorkerProfileScreen.tsx` (foto,
+nombre, `RubroChipsList.tsx`, calificación) más un botón "Editar perfil" y el estado de Premium
+(vigente o no, con acceso directo a `PremiumScreen.tsx`), y abajo todas las publicaciones propias en
+`PublicacionesGrid.tsx` — una cuadrícula de miniaturas cuadradas de 3 columnas, estilo Instagram,
+distinta del layout de tarjeta completa que usa el feed.
 
 ## Perfil de trabajador generado por IA
 

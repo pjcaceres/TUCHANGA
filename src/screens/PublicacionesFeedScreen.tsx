@@ -101,6 +101,7 @@ export default function PublicacionesFeedScreen({ navigation }: Props) {
         esTrabajador={esTrabajador}
         onTrabajadores={() => navigation.navigate('WorkersList')}
         onPublicaciones={() => {}}
+        onMiPerfil={() => navigation.navigate('MiPerfil')}
         onPremium={() => navigation.navigate('Premium')}
         onMisChats={() => navigation.navigate('MisChats')}
         onConfiguracion={() => navigation.navigate('Configuracion')}

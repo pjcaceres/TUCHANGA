@@ -1,15 +1,23 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../constants/theme';
 
-export type TabActiva = 'trabajadores' | 'publicaciones';
+export type TabActiva = 'trabajadores' | 'publicaciones' | 'miPerfil';
 
 interface Props {
   activo: TabActiva;
+  esTrabajador: boolean;
   onTrabajadores: () => void;
   onPublicaciones: () => void;
+  onMiPerfil?: () => void;
 }
 
-export default function MainTabs({ activo, onTrabajadores, onPublicaciones }: Props) {
+export default function MainTabs({
+  activo,
+  esTrabajador,
+  onTrabajadores,
+  onPublicaciones,
+  onMiPerfil,
+}: Props) {
   return (
     <View style={styles.container}>
       <Pressable
@@ -28,6 +36,16 @@ export default function MainTabs({ activo, onTrabajadores, onPublicaciones }: Pr
           📸 Publicaciones
         </Text>
       </Pressable>
+      {esTrabajador && onMiPerfil && (
+        <Pressable
+          style={[styles.tab, activo === 'miPerfil' && styles.tabActive]}
+          onPress={onMiPerfil}
+        >
+          <Text style={[styles.tabText, activo === 'miPerfil' && styles.tabTextActive]}>
+            👤 Mi Perfil
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -51,7 +69,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.textMuted,
   },

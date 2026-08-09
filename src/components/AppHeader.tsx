@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../constants/theme';
+import HeaderMenu from './HeaderMenu';
 import MainTabs, { type TabActiva } from './MainTabs';
 
 interface Props {
@@ -7,6 +8,7 @@ interface Props {
   esTrabajador: boolean;
   onTrabajadores: () => void;
   onPublicaciones: () => void;
+  onMiPerfil?: () => void;
   onPremium: () => void;
   onMisChats: () => void;
   onConfiguracion: () => void;
@@ -17,6 +19,7 @@ export default function AppHeader({
   esTrabajador,
   onTrabajadores,
   onPublicaciones,
+  onMiPerfil,
   onPremium,
   onMisChats,
   onConfiguracion,
@@ -25,23 +28,22 @@ export default function AppHeader({
     <View style={styles.container}>
       <View style={styles.topRow}>
         <Text style={styles.title}>TuChanga</Text>
-        <View style={styles.headerActions}>
-          {esTrabajador && (
-            <Pressable onPress={onPremium}>
-              <Text style={styles.premiumLink}>⭐ Premium</Text>
-            </Pressable>
-          )}
-          <Pressable onPress={onMisChats}>
-            <Text style={styles.logout}>💬 Mis chats</Text>
-          </Pressable>
-          <Pressable onPress={onConfiguracion}>
-            <Text style={styles.logout}>⚙️ Configuración</Text>
-          </Pressable>
-        </View>
+        <HeaderMenu
+          esTrabajador={esTrabajador}
+          onPremium={onPremium}
+          onMisChats={onMisChats}
+          onConfiguracion={onConfiguracion}
+        />
       </View>
 
       <View style={styles.tabsSection}>
-        <MainTabs activo={activo} onTrabajadores={onTrabajadores} onPublicaciones={onPublicaciones} />
+        <MainTabs
+          activo={activo}
+          esTrabajador={esTrabajador}
+          onTrabajadores={onTrabajadores}
+          onPublicaciones={onPublicaciones}
+          onMiPerfil={onMiPerfil}
+        />
       </View>
     </View>
   );
@@ -63,21 +65,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     color: colors.primary,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  premiumLink: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-  logout: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textMuted,
   },
   tabsSection: {
     paddingHorizontal: 20,

@@ -8,6 +8,7 @@ import DejarResenaScreen from '../screens/DejarResenaScreen';
 import EditarPerfilClienteScreen from '../screens/EditarPerfilClienteScreen';
 import EditarPerfilScreen from '../screens/EditarPerfilScreen';
 import LoginScreen from '../screens/LoginScreen';
+import MiPerfilScreen from '../screens/MiPerfilScreen';
 import MisChatsScreen from '../screens/MisChatsScreen';
 import PremiumScreen from '../screens/PremiumScreen';
 import PrivacidadScreen from '../screens/PrivacidadScreen';
@@ -102,6 +103,7 @@ function AppNavigator() {
         component={PublicarTrabajoScreen}
         options={{ title: 'Publicar un trabajo' }}
       />
+      <AppStack.Screen name="MiPerfil" component={MiPerfilScreen} options={{ headerShown: false }} />
     </AppStack.Navigator>
   );
 }

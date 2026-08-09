@@ -199,6 +199,7 @@ export default function WorkersListScreen({ navigation }: Props) {
         esTrabajador={esTrabajador}
         onTrabajadores={() => {}}
         onPublicaciones={() => navigation.navigate('PublicacionesFeed')}
+        onMiPerfil={() => navigation.navigate('MiPerfil')}
         onPremium={() => navigation.navigate('Premium')}
         onMisChats={() => navigation.navigate('MisChats')}
         onConfiguracion={() => navigation.navigate('Configuracion')}

@@ -19,4 +19,5 @@ export type AppStackParamList = {
   EditarPerfilCliente: undefined;
   PublicacionesFeed: undefined;
   PublicarTrabajo: undefined;
+  MiPerfil: undefined;
 };
