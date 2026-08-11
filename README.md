@@ -57,6 +57,7 @@ src/
     avatar.ts                   Elegir una foto y subirla al bucket "avatars" de Storage
     publicaciones.ts            Elegir/subir hasta 6 fotos de trabajo, borrar una publicación, traer las fotos de varias
     likes.ts                    Traer los likes de varias publicaciones, dar/quitar el propio
+    moderacion.ts                Convertir una foto a base64 y mandarla a la Edge Function "moderar-foto"
   navigation/
     RootNavigator.tsx         Cambia entre stack de auth y stack de la app según la sesión
     types.ts                  Param lists de cada stack
@@ -75,7 +76,7 @@ src/
     MisChatsScreen.tsx         Lista de conversaciones del usuario (cliente o trabajador)
     ChatScreen.tsx             Chat de una conversación: burbujas, input y actualización en tiempo real (Supabase Realtime)
     PublicacionesFeedScreen.tsx  Feed de fotos de trabajos de todos los trabajadores, más recientes primero
-    PublicarTrabajoScreen.tsx    Formulario para que un trabajador publique una foto + descripción corta opcional
+    PublicarTrabajoScreen.tsx    Formulario para publicar hasta 6 fotos (moderadas con IA antes de subirse) + descripción opcional
     MiPerfilScreen.tsx           Pestaña "Mi Perfil" (solo trabajador): foto, rubros, calificación, Editar perfil, Premium y grid de publicaciones propias
   types/
     database.ts               Tipos generados a mano del esquema de Supabase
@@ -97,6 +98,7 @@ supabase/
   seed.sql                    Trabajadores ficticios de prueba repartidos en varios departamentos
   functions/
     generar-perfil/           Edge Function: arma rubros/descripción/departamento con Claude (Anthropic)
+    moderar-foto/             Edge Function: modera una foto de trabajo con Claude (visión) antes de publicarla
 ```
 
 ## Setup
@@ -119,7 +121,8 @@ supabase/
    - `supabase/migrations/0012_publicacion_fotos.sql`
    - `supabase/migrations/0013_publicacion_likes.sql`
    - `supabase/seed.sql` (opcional, carga trabajadores de prueba para ver el listado funcionando)
-3. Desplegá la Edge Function `generar-perfil` y configurá su secreto (ver sección siguiente).
+3. Desplegá las Edge Functions `generar-perfil` y `moderar-foto`, y configurá el secreto
+   `ANTHROPIC_API_KEY` que usan ambas (ver secciones siguientes).
 4. Instalá dependencias y arrancá la app:
 
    ```bash
@@ -252,6 +255,36 @@ foto individual sí se mide con `onLayout` para el cálculo de paginado — así
 tanto en `PublicacionCard.tsx` (feed y perfil del trabajador, con `aspectRatio` 4:5) como en la
 cuadrícula cuadrada de "Mis publicaciones" (`PublicacionesGrid.tsx`, con `aspectRatio` 1), con la
 misma navegación por flechas/swipe y el mismo contador en los tres lugares.
+
+## Moderación automática de fotos
+
+Antes de publicar, cada foto elegida pasa por la Edge Function `moderar-foto`, que le manda la
+imagen a Claude (Anthropic, con capacidad de visión) para clasificarla como apropiada o no para una
+plataforma profesional de changas — igual que `generar-perfil`, corre del lado del servidor y usa
+la misma `ANTHROPIC_API_KEY` ya configurada, sin secretos nuevos que agregar. Se marca como no
+apropiada cualquier imagen con desnudos, contenido sexual, violencia gráfica, o que claramente no
+tenga relación con mostrar un trabajo de oficio realizado (memes, capturas de pantalla, selfies sin
+contexto, etc.); ante la duda, el prompt le pide a la IA que priorice no bloquear fotos que parezcan
+genuinamente de un trabajo. Si Claude directamente se niega a describir la imagen (`stop_reason:
+"refusal"`), la función también la bloquea por las dudas, tratando esa negativa como una señal fuerte
+de contenido problemático.
+
+`src/lib/moderacion.ts` hace la conversión de cada foto elegida (su `uri` local, sea `file://`,
+`content://`, `blob:` o `data:`) a un string base64 con el truco `fetch` → `Blob` → `FileReader`, que
+funciona igual en React Native nativo (que trae su propio shim de `Blob`/`FileReader`) y en web, sin
+depender de `expo-file-system` ni de `Buffer` (que no existe en el runtime de RN). `PublicarTrabajoScreen.tsx`
+llama a `moderarFotos()` con todas las fotos elegidas *antes* de subir ninguna: si alguna es
+rechazada, no se sube nada y se le muestra al trabajador un mensaje genérico ("no cumple con las
+normas de contenido de TuChanga") sin decir qué detectó la IA exactamente, para no darle pistas de
+cómo evadir el filtro la próxima vez. Si en cambio la revisión falla por una razón técnica (sin red,
+la IA no respondió), se muestra un mensaje distinto pidiendo probar de nuevo — ahí sí hay dos
+mensajes diferentes, porque solo uno de los dos casos es realmente sobre el contenido de la foto.
+
+Para habilitar `moderar-foto` desde el [Dashboard de Supabase](https://supabase.com/dashboard): en
+*Edge Functions* → *Deploy a new function* → nombrala exactamente `moderar-foto` → pegá el contenido
+completo de `supabase/functions/moderar-foto/index.ts` → *Deploy* (reutiliza el mismo secreto
+`ANTHROPIC_API_KEY` de la sección anterior, no hace falta configurarlo de nuevo). Con el CLI:
+`supabase functions deploy moderar-foto`.
 
 ## Me gusta en publicaciones
 
@@ -509,5 +542,6 @@ hay build step que los sincronice automáticamente).
 - [x] Perfil de trabajador y de cliente editables desde la app luego del registro (con la opción de IA para trabajador)
 - [x] Foto de perfil (trabajador y cliente)
 - [x] Un trabajador puede tener más de un rubro, con filtro y detección por IA acordes
+- [x] Moderación automática (con IA de visión) de las fotos de trabajo antes de publicarlas
 - [ ] Dictado por audio (hoy funciona vía el micrófono del teclado del sistema, no hay grabación propia)
 - [ ] Cobro real del plan premium (Mercado Pago u otro medio) — hoy se activa sin costo para probar la lógica

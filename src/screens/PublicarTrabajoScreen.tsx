@@ -15,6 +15,7 @@ import {
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import type { FotoElegida } from '../lib/avatar';
+import { moderarFotos } from '../lib/moderacion';
 import {
   elegirFotosDeTrabajo,
   MAX_FOTOS_POR_PUBLICACION,
@@ -60,6 +61,13 @@ export default function PublicarTrabajoScreen({ navigation }: Props) {
     }
 
     setPublicando(true);
+
+    const { ok: fotosOk, error: moderacionError } = await moderarFotos(fotos);
+    if (!fotosOk) {
+      setPublicando(false);
+      setError(moderacionError);
+      return;
+    }
 
     const { urls, error: uploadError } = await subirFotosDeTrabajo(userId, fotos);
 
